@@ -1,0 +1,6 @@
+# Git Ignore
+技能学习与比赛备战计划.md
+.workbuddy/
+*.py
+__pycache__/
+.DS_Store

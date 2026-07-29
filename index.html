@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>智能家居系统 · 工作台</title>
+
+<!-- PWA Meta -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="智能家居工作台">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0984e3">
+<meta name="description" content="ESP32 智能家居项目进度追踪 · 比赛日历 · 存钱计划 · 学习资源">
+
+<!-- PWA Icons -->
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --border: #e8eaef;
+  --text: #2d3436;
+  --text2: #636e72;
+  --text3: #b2bec3;
+  --accent: #0984e3;
+  --accent2: #6c5ce7;
+  --green: #00b894;
+  --orange: #e17055;
+  --red: #d63031;
+  --yellow: #fdcb6e;
+  --week1: #e17055;
+  --week2: #0984e3;
+  --week3: #6c5ce7;
+  --week4: #00b894;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ========== SIDEBAR ========== */
+.sidebar {
+  width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-logo span { font-size: 24px; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
+.nav-item {
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text2);
+  transition: all 0.15s;
+  display: flex; align-items: center; gap: 10px;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--bg); color: var(--text); }
+.nav-item.active { background: #e8f4fd; color: var(--accent); font-weight: 600; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-stats {
+  margin-top: auto;
+  padding: 16px;
+  background: var(--bg);
+  border-radius: var(--radius);
+}
+.stat-item { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.stat-item:last-child { margin-bottom: 0; }
+.stat-val { font-weight: 600; color: var(--text); }
+
+/* ========== MAIN ========== */
+.main {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 28px;
+}
+.header h1 { font-size: 22px; font-weight: 700; }
+.header-badge {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #e8f4fd;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ========== TABS ========== */
+.tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+.tab-btn {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px; font-weight: 500;
+  color: var(--text2); cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ========== WEEK CARDS ========== */
+.weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.week-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.week-header {
+  padding: 16px 20px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.week-header.w1 { background: var(--week1); }
+.week-header.w2 { background: var(--week2); }
+.week-header.w3 { background: var(--week3); }
+.week-header.w4 { background: var(--week4); }
+
+.week-date { font-size: 12px; opacity: 0.85; font-weight: 500; }
+.week-body { padding: 12px 16px; }
+.week-goal {
+  font-size: 13px; color: var(--text2); margin-bottom: 12px;
+  padding: 8px 12px; background: var(--bg); border-radius: 6px;
+}
+.task-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.task-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; padding: 6px 0; }
+.task-item input[type="checkbox"] {
+  margin-top: 2px; flex-shrink: 0;
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+.task-item.done .task-text { color: var(--text3); text-decoration: line-through; }
+.task-text { line-height: 1.5; color: var(--text); }
+.task-resource { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.week-progress {
+  margin-top: 12px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.week-progress-bar { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.week-progress-bar.w1 { background: var(--week1); }
+.week-progress-bar.w2 { background: var(--week2); }
+.week-progress-bar.w3 { background: var(--week3); }
+.week-progress-bar.w4 { background: var(--week4); }
+.week-progress-text { font-size: 11px; color: var(--text3); margin-top: 4px; text-align: right; }
+
+.week-complete-badge {
+  text-align: center; padding: 8px; color: var(--green); font-weight: 600; font-size: 13px;
+}
+
+/* ========== RACE TAB ========== */
+.race-list { display: flex; flex-direction: column; gap: 14px; }
+.race-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  display: flex; align-items: center; gap: 20px;
+  border-left: 4px solid var(--border);
+  transition: all 0.2s;
+}
+.race-card:hover { box-shadow: var(--shadow-lg); }
+.race-card.soon { border-left-color: var(--red); }
+.race-card.upcoming { border-left-color: var(--orange); }
+.race-card.future { border-left-color: var(--accent); }
+.race-date {
+  min-width: 70px; text-align: center;
+}
+.race-date .day { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+.race-date .month { font-size: 12px; color: var(--text2); }
+.race-date .race-date-label { font-size: 10px; color: var(--text3); margin-top: 2px; font-weight: 500; }
+.race-info { flex: 1; }
+.race-info .race-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.race-info .race-detail { font-size: 12px; color: var(--text2); }
+.race-info .race-comp { font-size: 11px; color: var(--accent); margin-top: 4px; font-weight: 500; }
+.race-cost {
+  font-size: 13px; font-weight: 600; color: var(--accent);
+  background: #e8f4fd; padding: 4px 12px; border-radius: 12px;
+}
+.race-countdown {
+  text-align: center; min-width: 72px;
+}
+.race-countdown .cd-label {
+  font-size: 10px; color: var(--text3); margin-bottom: 2px;
+}
+.race-countdown .cd-num {
+  font-size: 15px; font-weight: 700;
+  padding: 2px 8px; border-radius: 12px; display: inline-block;
+}
+.race-countdown.urgent .cd-num { background: #ffeaa7; color: #d63031; }
+.race-countdown.normal .cd-num { background: #dfe6e9; color: var(--text2); }
+
+/* ========== SAVE TAB ========== */
+.save-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.save-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+.save-card h3 { font-size: 15px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+.progress-circle-wrap { text-align: center; margin-bottom: 16px; }
+.progress-ring {
+  transform: rotate(-90deg);
+}
+.progress-ring-bg { fill: none; stroke: var(--border); stroke-width: 10; }
+.progress-ring-fill { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+.progress-ring-text { font-size: 24px; font-weight: 700; fill: var(--text); text-anchor: middle; dominant-baseline: middle; }
+.save-detail { font-size: 13px; color: var(--text2); line-height: 1.8; }
+.save-detail b { color: var(--text); }
+
+.budget-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.budget-table th { text-align: left; color: var(--text2); font-weight: 500; padding: 8px 4px; border-bottom: 1px solid var(--border); }
+.budget-table td { padding: 10px 4px; border-bottom: 1px solid var(--border); }
+.budget-table tr:last-child td { border-bottom: none; font-weight: 700; color: var(--accent); }
+.budget-table .spent { color: var(--red); }
+.budget-table .safe { color: var(--green); }
+
+.save-target-input {
+  display: flex; gap: 8px; margin-top: 12px;
+}
+.save-target-input input {
+  flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 14px; font-family: inherit; outline: none;
+}
+.save-target-input input:focus { border-color: var(--accent); }
+.save-target-input button {
+  padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.save-target-input button:hover { opacity: 0.9; }
+
+/* ========== CHECKLIST TAB ========== */
+.checklist-container { display: flex; flex-direction: column; gap: 16px; max-width: 600px; }
+.check-group {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+.check-group h3 { font-size: 14px; margin-bottom: 12px; color: var(--accent); }
+.check-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.check-item:last-child { border-bottom: none; }
+.check-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.check-item.done label { color: var(--text3); text-decoration: line-through; }
+
+/* ========== RESOURCES PANEL ========== */
+.res-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.res-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  border-left: 3px solid var(--accent);
+}
+.res-card h4 { font-size: 14px; margin-bottom: 8px; }
+.res-links { display: flex; flex-direction: column; gap: 4px; }
+.res-link {
+  font-size: 13px; color: var(--accent); text-decoration: none;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0;
+}
+.res-link:hover { text-decoration: underline; }
+.res-link .tag {
+  font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e8f4fd;
+  color: var(--accent); font-weight: 600;
+}
+.res-link .tag.best { background: #dff9fb; color: #0984e3; }
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  body { flex-direction: column; }
+  .sidebar {
+    width: 100%; flex-direction: row; flex-wrap: wrap; gap: 8px;
+    padding: 12px; border-right: none; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo { width: 100%; }
+  .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+  .sidebar-stats { display: none; }
+  .main { padding: 16px; }
+  .weeks-grid { grid-template-columns: 1fr; }
+  .save-container { grid-template-columns: 1fr; }
+  .race-card { flex-wrap: wrap; }
+}
+
+/* ========== PWA STANDALONE MODE ========== */
+@media (display-mode: standalone) {
+  body {
+    /* Add safe area padding for notch/hole-punch phones */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    /* Prevent pull-to-refresh */
+    overscroll-behavior: none;
+    /* Full height */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  .sidebar {
+    padding-top: env(safe-area-inset-top);
+  }
+  .nav-item {
+    /* Larger touch targets for standalone */
+    min-height: 44px;
+  }
+  .task-item input[type="checkbox"] {
+    width: 20px; height: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="sidebar">
+  <div class="sidebar-logo"><span>🏠</span>智能家居工作台</div>
+  <nav class="sidebar-nav">
+    <button class="nav-item active" data-tab="project"><span class="nav-icon">📅</span>项目进度</button>
+    <button class="nav-item" data-tab="race"><span class="nav-icon">🏆</span>比赛日历</button>
+    <button class="nav-item" data-tab="save"><span class="nav-icon">💰</span>存钱计划</button>
+    <button class="nav-item" data-tab="check"><span class="nav-icon">📋</span>周检查</button>
+    <button class="nav-item" data-tab="skill"><span class="nav-icon">🧠</span>技能清单</button>
+    <button class="nav-item" data-tab="resource"><span class="nav-icon">📚</span>学习资源</button>
+  </nav>
+  <div class="sidebar-stats">
+    <div class="stat-item"><span>开学倒计时</span><span class="stat-val" id="stat-countdown">--</span></div>
+    <div class="stat-item"><span>已完成任务</span><span class="stat-val" id="stat-done">--</span></div>
+    <div class="stat-item"><span>存钱进度</span><span class="stat-val" id="stat-save">--</span></div>
+  </div>
+</aside>
+
+<!-- ========== MAIN ========== -->
+<main class="main">
+  <div class="header">
+    <h1>ESP32 智能家居系统</h1>
+    <div class="header-badge">📅 距离开学：<b id="school-countdown">--</b> 天</div>
+  </div>
+
+  <!-- TAB: 项目进度 -->
+  <div class="tab-content active" id="tab-project">
+    <div class="tabs">
+      <button class="tab-btn active" data-week="all">全部</button>
+      <button class="tab-btn" data-week="1">Week 1 硬件</button>
+      <button class="tab-btn" data-week="2">Week 2 通信</button>
+      <button class="tab-btn" data-week="3">Week 3 后端</button>
+      <button class="tab-btn" data-week="4">Week 4 APP</button>
+    </div>
+    <div class="weeks-grid" id="weeks-container"></div>
+  </div>
+
+  <!-- TAB: 比赛日历 -->
+  <div class="tab-content" id="tab-race">
+    <div class="race-list" id="race-list"></div>
+  </div>
+
+  <!-- TAB: 存钱计划 -->
+  <div class="tab-content" id="tab-save">
+    <div class="save-container">
+      <div class="save-card" style="text-align:center">
+        <h3>🎯 5000元目标</h3>
+        <div class="progress-circle-wrap">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle class="progress-ring-bg" cx="80" cy="80" r="65"></circle>
+            <circle class="progress-ring-fill" id="save-ring" cx="80" cy="80" r="65"></circle>
+            <text class="progress-ring-text" id="save-pct" x="80" y="80">0%</text>
+          </svg>
+        </div>
+        <div class="save-detail">
+          <p>已存：<b id="save-current">¥0</b> / <b>¥5,000</b></p>
+          <p>剩余：<b id="save-remain">¥5,000</b></p>
+          <p style="margin-top:8px;color:var(--text3)">目标日期：2027年3月</p>
+        </div>
+        <div class="save-target-input">
+          <input type="number" id="save-add" placeholder="添加存款金额" step="1" min="1">
+          <button onclick="addSave()">+ 存入</button>
+        </div>
+      </div>
+      <div class="save-card">
+        <h3>💸 比赛支出预算</h3>
+        <table class="budget-table" id="budget-table"></table>
+        <div style="margin-top:16px;padding:12px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--text2)">
+          💡 每月摊不到 <b>100元</b>，不影响5000目标。控制网购是关键。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 周检查 -->
+  <div class="tab-content" id="tab-check">
+    <div class="checklist-container" id="checklist-container"></div>
+    <button onclick="resetWeekCheck()" style="margin-top:20px;padding:10px 20px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-family:inherit;font-size:13px;color:var(--text2)">🔄 重置本周检查</button>
+  </div>
+
+  <!-- TAB: 技能清单 -->
+  <div class="tab-content" id="tab-skill">
+    <div id="skills-container"></div>
+  </div>
+
+  <!-- TAB: 学习资源 -->
+  <div class="tab-content" id="tab-resource">
+    <div class="res-grid" id="res-grid"></div>
+  </div>
+</main>
+
+<script>
+// ========== DATA ==========
+const WEEKS = [
+  {
+    id: 1, title: "硬件搭建", date: "7.30 — 8.05", color: "w1",
+    goal: "ESP32 跑起来，传感器数据能读到串口",
+    finishText: "所有传感器数据能在串口看到 + 继电器可控 + JSON格式输出",
+    tasks: [
+      { id:"1-1", text:"下单买硬件（ESP32 + 传感器套件）", res:"对照预算清单" },
+      { id:"1-2", text:"装 Arduino IDE + ESP32 驱动，跑通 Blink", res:"B站「零基础入门ESP32」前5集" },
+      { id:"1-3", text:"驱动 DHT11 温湿度传感器", res:"B站搜「ESP32 DHT11」" },
+      { id:"1-4", text:"驱动人体红外传感器 HC-SR501", res:"B站搜「ESP32 人体红外」" },
+      { id:"1-5", text:"驱动光敏电阻，读取光照值", res:"B站搜「ESP32 光敏电阻」" },
+      { id:"1-6", text:"驱动继电器 + LED 手动控制", res:"B站搜「ESP32 继电器」" },
+      { id:"1-7", text:"整合代码：传感器数据打包 JSON", res:"复习 + 查资料" },
+    ]
+  },
+  {
+    id: 2, title: "联网 + MQTT", date: "8.06 — 8.12", color: "w2",
+    goal: "ESP32 数据上云，Python 能收到",
+    finishText: "ESP32 → MQTT Broker → Python，数据链路走通",
+    tasks: [
+      { id:"2-1", text:"ESP32 连接 WiFi", res:"太极创客 ESP32 WiFi 篇" },
+      { id:"2-2", text:"学习 MQTT 协议概念（发布/订阅/Broker）", res:"EMQX 博客 + B站10分钟视频" },
+      { id:"2-3", text:"注册 EMQX Cloud 免费版，拿到 Broker 地址", res:"emqx.com → 免费试用" },
+      { id:"2-4", text:"安装 MQTTX 客户端，测试收发", res:"mqttx.app 下载" },
+      { id:"2-5", text:"ESP32 接入 MQTT，发传感器数据", res:"B站搜「ESP32 MQTT」" },
+      { id:"2-6", text:"装 Python 环境 + paho-mqtt", res:"pip install paho-mqtt" },
+      { id:"2-7", text:"Python 订阅 MQTT，接收 ESP32 数据", res:"B站搜「Python MQTT」" },
+    ]
+  },
+  {
+    id: 3, title: "数据库 + 后端", date: "8.13 — 8.19", color: "w3",
+    goal: "数据存 MySQL，有 API 能查",
+    finishText: "数据持续写入数据库 + API返回实时和历史数据 + 能反向控制",
+    tasks: [
+      { id:"3-1", text:"装 MySQL 8.0，建库建表", res:"尚硅谷 MySQL 前5集" },
+      { id:"3-2", text:"Python 连接 MySQL，MQTT数据入库", res:"B站搜「Python MySQL」" },
+      { id:"3-3", text:"Python Flask 快速入门", res:"黑马 Flask 前5集" },
+      { id:"3-4", text:"写 3 个 API（实时/历史/统计）", res:"Flask + MySQL 联调" },
+      { id:"3-5", text:"ESP32 加订阅功能，接收控制指令", res:"MQTT 双向通信" },
+      { id:"3-6", text:"全链路测试 + Bug修复", res:"端到端联调" },
+      { id:"3-7", text:"代码整理 + 加注释 + 配置文档", res:"—" },
+    ]
+  },
+  {
+    id: 4, title: "Web 控制面板", date: "8.20 — 8.27", color: "w4",
+    goal: "手机浏览器看温湿度曲线，能开关灯",
+    finishText: "手机能实时看到数据 + 远程开关灯 + 有项目README",
+    tasks: [
+      { id:"4-1", text:"学 HTML/CSS/JS 基础", res:"菜鸟教程 HTML + CSS" },
+      { id:"4-2", text:"用 ECharts 画实时温湿度折线图", res:"ECharts 官网复制示例改数据" },
+      { id:"4-3", text:"页面加开关按钮，HTTP 控制灯", res:"JS fetch + Flask API" },
+      { id:"4-4", text:"响应式布局，适配手机屏幕", res:"CSS flexbox" },
+      { id:"4-5", text:"全链路联调，修 Bug", res:"—" },
+      { id:"4-6", text:"写项目 README + 架构图", res:"—" },
+      { id:"4-7", text:"录演示视频 + 暑假总结", res:"手机录屏2分钟" },
+    ]
+  },
+];
+
+const RACES = [
+  { name:"CRH 大数据赛", regDate:"2026-08-20", compDate:"2026-09-12", cost:"50元", detail:"1小时线上答题 · Python+数据库", type:"upcoming" },
+  { name:"蓝桥杯 18届", regDate:"2026-12-15", compDate:"2027年4月", cost:"300元", detail:"省赛4月 · 10月起盯官网报名", type:"future" },
+  { name:"NCCCU 省赛", regDate:"2026-11-25", compDate:"2026-11-29", cost:"80元", detail:"Python赛道 · 线上 · 冲省一", type:"future" },
+  { name:"NCCCU 国赛", regDate:"—", compDate:"2026-12-20", cost:"免费", detail:"省赛晋级后自动参加", type:"future" },
+  { name:"计算机设计大赛", regDate:"2027-03-15", compDate:"2027年4月", cost:"~200元", detail:"物联网赛道 · 用智能家居项��", type:"future" },
+];
+
+const RACE_BUDGET = [
+  { item:"硬件 ESP32 + 传感器", cost:120, status:"safe" },
+  { item:"CRH 大数据赛", cost:50, status:"safe" },
+  { item:"NCCCU", cost:80, status:"safe" },
+  { item:"蓝桥杯 18届", cost:300, status:"safe" },
+  { item:"计算机设计大赛", cost:200, status:"safe" },
+];
+
+const CHECKLIST = [
+  { group:"每周自查（周日晚上花5分钟）", items:[
+    "项目进度：这周推进了哪个模块？有可展示成果吗？",
+    "学习记录：遇到不会的，是看教程还是闷头试？学到了什么？",
+    "代码提交：有没有上传 GitHub/Gitee？",
+    "比赛日历：有没有报名截止日快到了？",
+    "精力管理：这周状态怎么样？需要调节奏吗？",
+  ]},
+];
+
+const RESOURCES = [
+  { cat:"ESP32 + Arduino", links:[
+    { name:"太极创客 ESP32 教程", url:"https://search.bilibili.com/all?keyword=太极创客 ESP32", tag:"best" },
+    { name:"零基础入门ESP32单片机", url:"https://www.bilibili.com/video/BV1bqVnzREnQ", tag:"best" },
+    { name:"Arduino 中文社区", url:"https://arduino.me", tag:"" },
+  ]},
+  { cat:"MQTT 协议", links:[
+    { name:"EMQX MQTT 入门教程", url:"https://www.emqx.com/zh/blog/category/mqtt", tag:"best" },
+    { name:"MQTTX 桌面客户端", url:"https://mqttx.app", tag:"" },
+    { name:"EMQX Cloud 免费版", url:"https://www.emqx.com/zh/cloud", tag:"" },
+  ]},
+  { cat:"Python Flask", links:[
+    { name:"B站黑马 Flask 教程", url:"https://search.bilibili.com/all?keyword=黑马程序员 Flask", tag:"best" },
+    { name:"Flask 中文文档", url:"https://flask-zh.readthedocs.io", tag:"" },
+    { name:"菜鸟教程 Flask", url:"https://www.runoob.com/flask", tag:"" },
+  ]},
+  { cat:"MySQL 数据库", links:[
+    { name:"尚硅谷 MySQL 基础", url:"https://search.bilibili.com/all?keyword=尚硅谷 MySQL", tag:"best" },
+    { name:"SQLZoo 练习", url:"https://sqlzoo.net", tag:"" },
+    { name:"��鸟教程 MySQL", url:"https://www.runoob.com/mysql", tag:"" },
+  ]},
+  { cat:"Web 前端", links:[
+    { name:"菜鸟教程 HTML/CSS/JS", url:"https://www.runoob.com", tag:"" },
+    { name:"ECharts 官方示例", url:"https://echarts.apache.org/examples", tag:"best" },
+    { name:"MDN Web 文档", url:"https://developer.mozilla.org/zh-CN", tag:"" },
+  ]},
+  { cat:"Linux & Shell", links:[
+    { name:"尚硅谷 Linux 教程", url:"https://search.bilibili.com/all?keyword=尚硅谷 Linux", tag:"best" },
+    { name:"菜鸟教程 Linux", url:"https://www.runoob.com/linux", tag:"" },
+    { name:"OverTheWire Bandit 闯关", url:"https://overthewire.org/wargames/bandit", tag:"" },
+  ]},
+  { cat:"计算机网络", links:[
+    { name:"小林coding 网络篇", url:"https://xiaolincoding.com", tag:"best" },
+    { name:"湖科大教书匠 计算机网络", url:"https://search.bilibili.com/all?keyword=湖科大教书匠 计算机网络", tag:"" },
+  ]},
+];
+
+const SKILLS = [
+  { cat:"第一批必学", color: "var(--accent)", items:[
+    { name:"Python 基础",     icon:"🐍", taskIds:["3-3","3-4"], desc:"Flask API + MQTT 客户端" },
+    { name:"数据库基础",      icon:"🗄️", taskIds:["3-1","3-2"], desc:"MySQL 建表、增删改查" },
+    { name:"Linux 基础",      icon:"🐧", taskIds:["3-1","3-3"], desc:"WSL/Ubuntu 上跑后端服务" },
+    { name:"Shell 基础",      icon:"💻", taskIds:["3-7"],       desc:"写启动脚本、部署脚本" },
+    { name:"计算机网络基础",  icon:"🌐", taskIds:["2-1","2-2","2-5"], desc:"WiFi、TCP/IP、MQTT、HTTP" },
+    { name:"常见故障排查",    icon:"🔧", taskIds:["1-3","2-5","3-6","4-5"], desc:"串口调试、MQTT断连、API报错" },
+  ]},
+  { cat:"第二批加分项", color: "var(--accent2)", items:[
+    { name:"Excel 数据处理",  icon:"📊", taskIds:[], desc:"导出 CSV 数据做分析（Week4后解锁）", locked:true },
+    { name:"文档整理",        icon:"📝", taskIds:["4-6"], desc:"项目 README + 技术文档" },
+    { name:"简单写作",        icon:"✍️", taskIds:["4-6"], desc:"技术博客、项目说明" },
+    { name:"沟通表达",        icon:"🎤", taskIds:[], desc:"比赛答辩、作品展示（明年解锁）", locked:true },
+    { name:"会看日志",        icon:"📋", taskIds:["3-6","4-5"], desc:"Python / MySQL / MQTT 日志分析" },
+  ]},
+];
+
+// ========== STATE ==========
+const STORAGE_KEY = "smarthome_workbench";
+const SCHOOL_DATE = new Date("2026-08-28");
+
+function loadState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+function save(key, val) { state[key] = val; saveState(state); }
+
+// ========== RENDER: WEEK CARDS ==========
+function renderWeeks(filter = "all") {
+  const container = document.getElementById("weeks-container");
+  container.innerHTML = WEEKS
+    .filter(w => filter === "all" || String(w.id) === filter)
+    .map(w => {
+      const tasks = (state["week_" + w.id] || []);
+      const done = w.tasks.filter(t => tasks.includes(t.id)).length;
+      const pct = w.tasks.length > 0 ? Math.round(done / w.tasks.length * 100) : 0;
+      const allDone = done === w.tasks.length;
+
+      return `
+      <div class="week-card">
+        <div class="week-header ${w.color}">
+          <span>Week ${w.id} · ${w.title}</span>
+          <span class="week-date">${w.date}</span>
+        </div>
+        <div class="week-body">
+          <div class="week-goal">🎯 ${w.goal}</div>
+          <ul class="task-list">
+            ${w.tasks.map(t => {
+              const isDone = tasks.includes(t.id);
+              const cls = isDone ? "task-item done" : "task-item";
+              return `
+              <li class="${cls}">
+                <input type="checkbox" ${isDone ? "checked" : ""} onchange="toggleTask('${w.id}','${t.id}')">
+                <div>
+                  <div class="task-text">${t.text}</div>
+                  ${t.res ? `<div class="task-resource">📖 ${t.res}</div>` : ""}
+                </div>
+              </li>`;
+            }).join("")}
+          </ul>
+          <div class="week-progress">
+            <div class="week-progress-bar ${w.color}" style="width:${pct}%"></div>
+          </div>
+          <div class="week-progress-text">${done}/${w.tasks.length} 完成</div>
+          ${allDone ? `<div class="week-complete-badge">✅ ${w.finishText}</div>` : ""}
+        </div>
+      </div>`;
+    }).join("");
+}
+
+function toggleTask(weekId, taskId) {
+  const key = "week_" + weekId;
+  let tasks = (state[key] || []);
+  if (tasks.includes(taskId)) {
+    tasks = tasks.filter(t => t !== taskId);
+  } else {
+    tasks.push(taskId);
+  }
+  save(key, tasks);
+  renderWeeks(getCurrentWeekFilter());
+  renderSkills();
+  updateStats();
+}
+
+function getCurrentWeekFilter() {
+  const activeBtn = document.querySelector(".tab-btn.active");
+  return activeBtn ? activeBtn.dataset.week : "all";
+}
+
+// ========== RENDER: RACES ==========
+function renderRaces() {
+  const now = new Date();
+  const container = document.getElementById("race-list");
+  container.innerHTML = RACES.map(r => {
+    const compDateStr = r.compDate;
+    let regDate = null, regDiff = null;
+    if (r.regDate !== "—") {
+      regDate = new Date(r.regDate);
+      regDiff = Math.ceil((regDate - now) / (1000 * 60 * 60 * 24));
+    }
+
+    // Countdown to registration deadline
+    let cls = "future", cdCls = "normal", cdLabel = "距报名截止", cdText = regDiff !== null ? `${regDiff} 天` : "—";
+    if (regDiff !== null) {
+      if (regDiff <= 0) { cdText = "已截止"; cdCls = "urgent"; cls = "soon"; cdLabel = "报名状态"; }
+      else if (regDiff <= 7) { cls = "soon"; cdCls = "urgent"; }
+      else if (regDiff <= 30) { cls = "upcoming"; }
+    }
+
+    // Format the date display - show reg deadline month/day as primary
+    const showDate = regDate || new Date(compDateStr);
+    const dayText = String(showDate.getDate()).padStart(2, '0');
+    const monthText = (showDate.getMonth() + 1) + "月";
+    const dateLabel = regDate ? "报名截止" : "比赛日";
+
+    return `
+    <div class="race-card ${cls}">
+      <div class="race-date">
+        <div class="day">${dayText}</div>
+        <div class="month">${monthText}</div>
+        <div class="race-date-label">${dateLabel}</div>
+      </div>
+      <div class="race-info">
+        <div class="race-name">${r.name}</div>
+        <div class="race-detail">${r.detail}</div>
+        <div class="race-comp">📅 比赛：${compDateStr}</div>
+      </div>
+      <div class="race-cost">${r.cost}</div>
+      <div class="race-countdown ${cdCls}">
+        <div class="cd-label">${cdLabel}</div>
+        <div class="cd-num">${cdText}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ========== RENDER: SAVE ==========
+function renderSave() {
+  const current = Number(state.saveCurrent || 0);
+  const target = 5000;
+  const pct = Math.min(100, Math.round(current / target * 100));
+  const remain = target - current;
+
+  // progress ring
+  const ring = document.getElementById("save-ring");
+  const circum = 2 * Math.PI * 65;
+  ring.setAttribute("stroke-dasharray", circum);
+  ring.setAttribute("stroke-dashoffset", circum - (pct / 100) * circum);
+
+  document.getElementById("save-pct").textContent = pct + "%";
+  document.getElementById("save-current").textContent = "¥" + current.toLocaleString();
+  document.getElementById("save-remain").textContent = "¥" + remain.toLocaleString();
+
+  // budget table
+  const totalSpent = RACE_BUDGET.reduce((s, x) => s + x.cost, 0);
+  document.getElementById("budget-table").innerHTML = `
+    <tr><th>项目</th><th>费用</th></tr>
+    ${RACE_BUDGET.map(x => `<tr><td>${x.item}</td><td class="${x.status}">¥${x.cost}</td></tr>`).join("")}
+    <tr><td>合计</td><td>¥${totalSpent}</td></tr>`;
+}
+
+function addSave() {
+  const input = document.getElementById("save-add");
+  const val = parseInt(input.value);
+  if (!val || val <= 0) { alert("请输入有效金额"); return; }
+  const current = Number(state.saveCurrent || 0);
+  save("saveCurrent", current + val);
+  input.value = "";
+  renderSave();
+  updateStats();
+}
+
+// ========== RENDER: CHECKLIST ==========
+function renderChecklist() {
+  const container = document.getElementById("checklist-container");
+  const checked = state.weekCheck || [];
+  container.innerHTML = CHECKLIST.map(g => `
+    <div class="check-group">
+      <h3>${g.group}</h3>
+      ${g.items.map((item, i) => {
+        const id = "c" + i;
+        const isDone = checked.includes(id);
+        return `
+        <div class="check-item ${isDone ? 'done' : ''}">
+          <input type="checkbox" ${isDone ? "checked" : ""} onchange="toggleCheck('${id}')">
+          <label>${item}</label>
+        </div>`;
+      }).join("")}
+    </div>
+  `).join("");
+}
+
+function toggleCheck(id) {
+  let arr = state.weekCheck || [];
+  if (arr.includes(id)) arr = arr.filter(x => x !== id);
+  else arr.push(id);
+  save("weekCheck", arr);
+  renderChecklist();
+}
+
+function resetWeekCheck() {
+  save("weekCheck", []);
+  renderChecklist();
+}
+
+// ========== RENDER: SKILLS ==========
+function renderSkills() {
+  // Collect all completed task IDs across all weeks
+  const allDone = [];
+  WEEKS.forEach(w => {
+    const tasks = state["week_" + w.id] || [];
+    tasks.forEach(tid => allDone.push(tid));
+  });
+
+  const container = document.getElementById("skills-container");
+  let totalAll = 0, doneAll = 0, catIdx = 0;
+  const catPercentages = [];
+
+  // Calculate per-category stats first for the overview
+  SKILLS.forEach(cat => {
+    let catTotal = 0, catDone = 0;
+    cat.items.forEach(s => {
+      if (s.taskIds.length > 0) {
+        s.taskIds.forEach(tid => { catTotal++; if (allDone.includes(tid)) catDone++; });
+      }
+    });
+    totalAll += catTotal;
+    doneAll += catDone;
+    catPercentages.push({ cat: cat.cat, color: cat.color, pct: catTotal > 0 ? Math.round(catDone / catTotal * 100) : 0, done: catDone, total: catTotal });
+    catIdx++;
+  });
+  const overallPct = totalAll > 0 ? Math.round(doneAll / totalAll * 100) : 0;
+
+  let html = `
+    <!-- Overall progress -->
+    <div style="background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="font-size:15px;">🧠 技能总进度</h3>
+        <span style="font-size:24px;font-weight:700;color:var(--accent)">${overallPct}%</span>
+      </div>
+      <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:16px;">
+        <div style="height:100%;width:${overallPct}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:5px;transition:width 0.5s;"></div>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        ${catPercentages.map(c => `
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:${c.color};display:inline-block;"></span>
+            <span style="color:var(--text2)">${c.cat}</span>
+            <span style="font-weight:600;">${c.pct}%</span>
+            <span style="color:var(--text3)">(${c.done}/${c.total})</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+
+    <!-- Skill groups -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;">
+  `;
+
+  SKILLS.forEach(cat => {
+    html += `
+      <div style="background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;">
+        <div style="padding:14px 18px;background:${cat.color};color:#fff;font-weight:700;font-size:14px;">
+          ${cat.cat}
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:12px;">
+    `;
+
+    cat.items.forEach(s => {
+      let done = 0;
+      s.taskIds.forEach(tid => { if (allDone.includes(tid)) done++; });
+      const total = s.taskIds.length;
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+
+      if (s.locked && done === 0) {
+        html += `
+          <div style="opacity:0.5;padding:10px 12px;background:var(--bg);border-radius:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-weight:600;font-size:13px;">${s.icon} ${s.name}</span>
+              <span style="font-size:11px;color:var(--text3);background:var(--border);padding:2px 8px;border-radius:10px;">🔒 待解锁</span>
+            </div>
+            <div style="font-size:12px;color:var(--text3);">${s.desc}</div>
+          </div>`;
+      } else {
+        html += `
+          <div style="padding:10px 12px;background:${pct === 100 ? '#e6f9f0' : 'var(--bg)'};border-radius:8px;border-left:3px solid ${pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--orange)' : 'var(--border)'};">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-weight:600;font-size:13px;">${s.icon} ${s.name}</span>
+              <span style="font-size:12px;font-weight:700;color:${pct === 100 ? 'var(--green)' : 'var(--text2)'}">${pct}%</span>
+            </div>
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:4px;">
+              <div style="height:100%;width:${pct}%;background:${pct === 100 ? 'var(--green)' : 'var(--accent)'};border-radius:2px;transition:width 0.5s;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);">${s.desc}${total > 0 ? ' · ' + done + '/' + total + ' 任务完成' : ''}</div>
+          </div>`;
+      }
+    });
+
+    html += `</div></div>`;
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+function renderResources() {
+  document.getElementById("res-grid").innerHTML = RESOURCES.map(c => `
+    <div class="res-card">
+      <h4>${c.cat}</h4>
+      <div class="res-links">
+        ${c.links.map(l => `
+          <a class="res-link" href="${l.url}" target="_blank" rel="noopener">
+            ${l.name}
+            ${l.tag ? `<span class="tag ${l.tag}">${l.tag === 'best' ? '推荐' : ''}</span>` : ""}
+          </a>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+// ========== SIDEBAR STATS ==========
+function updateStats() {
+  const now = new Date();
+  const diff = Math.ceil((SCHOOL_DATE - now) / (1000 * 60 * 60 * 24));
+  document.getElementById("school-countdown").textContent = diff > 0 ? diff : "已开学";
+  document.getElementById("stat-countdown").textContent = diff > 0 ? diff + "天" : "已开学";
+
+  let totalDone = 0, totalTasks = 0;
+  WEEKS.forEach(w => {
+    const tasks = state["week_" + w.id] || [];
+    totalDone += w.tasks.filter(t => tasks.includes(t.id)).length;
+    totalTasks += w.tasks.length;
+  });
+  document.getElementById("stat-done").textContent = totalDone + "/" + totalTasks;
+
+  const current = Number(state.saveCurrent || 0);
+  document.getElementById("stat-save").textContent = Math.round(current / 5000 * 100) + "%";
+}
+
+// ========== NAVIGATION ==========
+function switchTab(name) {
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  document.querySelector(`.nav-item[data-tab="${name}"]`).classList.add("active");
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+}
+
+document.querySelectorAll(".nav-item").forEach(btn => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    this.classList.add("active");
+    renderWeeks(this.dataset.week);
+  });
+});
+
+// ========== INIT ==========
+function init() {
+  renderWeeks();
+  renderRaces();
+  renderSave();
+  renderChecklist();
+  renderSkills();
+  renderResources();
+  updateStats();
+}
+
+init();
+
+// Recalculate countdowns every minute
+setInterval(() => {
+  renderRaces();
+  updateStats();
+}, 60000);
+</script>
+
+<!-- PWA Service Worker Registration -->
+<script>
+// Only register SW in production (not file:// protocol)
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        console.log('✅ PWA Service Worker registered:', reg.scope);
+      })
+      .catch(err => {
+        console.warn('⚠️ SW registration failed (OK for local dev):', err.message);
+      });
+  });
+}
+
+// Show "Add to Home Screen" hint for mobile users (one-time)
+(function() {
+  if (localStorage.getItem('pwa_hint_shown')) return;
+  if (!navigator.userAgent.match(/Mobile|Android|iPhone/)) return;
+  // Don't show if already in standalone mode
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+
+  setTimeout(() => {
+    var hint = document.createElement('div');
+    hint.id = 'pwa-hint';
+    hint.innerHTML = '💡 点浏览器菜单 → <b>"添加到主屏幕"</b> → 以后像 APP 一样打开！';
+    hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);'
+      + 'background:#0984e3;color:#fff;padding:12px 20px;border-radius:24px;'
+      + 'font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);'
+      + 'cursor:pointer;max-width:90%;text-align:center;line-height:1.5;'
+      + 'animation:pwaSlideUp 0.4s ease';
+    hint.onclick = function() {
+      hint.style.opacity = '0';
+      hint.style.transition = 'opacity 0.3s';
+      setTimeout(function() { hint.remove(); }, 300);
+      localStorage.setItem('pwa_hint_shown', '1');
+    };
+    document.body.appendChild(hint);
+
+    var style = document.createElement('style');
+    style.textContent = '@keyframes pwaSlideUp { from { opacity:0; transform:translateX(-50%) translateY(40px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }';
+    document.head.appendChild(style);
+  }, 3000);
+})();
+</script>
+
+</body>
+</html>
