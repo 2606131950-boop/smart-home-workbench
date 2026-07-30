@@ -324,6 +324,33 @@ body {
 }
 .res-link .tag.best { background: #dff9fb; color: #0984e3; }
 
+/* ========== LOG PANEL ========== */
+.log-list { display: flex; flex-direction: column; gap: 16px; }
+.log-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.log-header {
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: #fff;
+}
+.log-date { font-size: 15px; font-weight: 700; }
+.log-body { padding: 14px 18px; }
+.log-section { margin-bottom: 14px; }
+.log-section:last-child { margin-bottom: 0; }
+.log-section-label {
+  font-size: 13px; font-weight: 600;
+  color: var(--text2); margin-bottom: 6px;
+  padding-bottom: 4px; border-bottom: 1px dashed var(--border);
+}
+.log-items { margin: 0; padding-left: 18px; }
+.log-items li {
+  font-size: 13px; color: var(--text); line-height: 1.7;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
   body { flex-direction: column; }
@@ -379,6 +406,7 @@ body {
     <button class="nav-item" data-tab="check"><span class="nav-icon">📋</span>周检查</button>
     <button class="nav-item" data-tab="skill"><span class="nav-icon">🧠</span>技能清单</button>
     <button class="nav-item" data-tab="resource"><span class="nav-icon">📚</span>学习资源</button>
+    <button class="nav-item" data-tab="log"><span class="nav-icon">📝</span>项目日志</button>
   </nav>
   <div class="sidebar-stats">
     <div class="stat-item"><span>开学倒计时</span><span class="stat-val" id="stat-countdown">--</span></div>
@@ -457,6 +485,10 @@ body {
   <!-- TAB: 学习资源 -->
   <div class="tab-content" id="tab-resource">
     <div class="res-grid" id="res-grid"></div>
+  </div>
+  <!-- TAB: 项目日志 -->
+  <div class="tab-content" id="tab-log">
+    <div class="log-list" id="log-list"></div>
   </div>
 </main>
 
@@ -965,6 +997,93 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
+// ========== DATA: LOGS ==========
+const LOGS = [
+  {
+    date: "2026-07-30 下午",
+    title: "📅 Day 2 · ESP32 功能验证 — WiFi · 串口 · Web 服务器",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "WiFi 扫描：成功扫描周围 WiFi 列表（串口输出信号强度）",
+          "串口收发：电脑打字 → ESP32 接收并回传「收到: xxx」",
+          "WiFi Web 服务器：ESP32 建网页，手机连同一 WiFi 浏览器打开控制 LED 开关",
+          "LED 呼吸灯：PWM 实现蓝色 LED 渐亮渐暗效果"
+        ]
+      },
+      {
+        label: "⚡ 踩坑记录",
+        items: [
+          "上传后串口空白 → 按板子上 EN/RST 按钮复位即可（setup 在上传前执行完了）",
+          "WiFi 连不上 → 需确认家里 WiFi 是 2.4G（ESP32 不支持 5G）",
+          "每次上传新程序自动覆盖旧程序，不需要手动停止上一个"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "任务 1-3：用面包板搭基础电路（3.3V / GND 分配）",
+          "任务 1-6：接 HC-SR501 人体红外传感器（三根线，最简单）",
+          "任务 1-4：接 DHT11 温湿度传感器（需装库）"
+        ]
+      }
+    ]
+  },
+  {
+    date: "2026-07-30 上午",
+    title: "📅 Day 1 · 开发环境搭建",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "安装 Arduino IDE + ESP32 板支持（3.1.3版本）",
+          "安装 CP2102 驱动（Silicon Labs 官网下载）",
+          "跑通 Blink 示例程序（板载蓝色 LED 闪烁成功）",
+          "确认板子支持自动烧录，不需要手动按 BOOT"
+        ]
+      },
+      {
+        label: "⚡ 踩坑记录",
+        items: [
+          "板管理 URL 前面多了 \"1 \" 导致解析失败 → 清空粘贴裸 URL 解决",
+          "下载工具链 GitHub 超时 → 等待自���重试后成功（约10分钟）",
+          "旧版 \"ESP32 Dev Board\" 不存在 → 改选 \"ESP32 Wrover Module\"",
+          "Blink 报错 LED_BUILTIN 未定义 → ESP32 不认此宏，全部替换为 GPIO 2",
+          "CP2102 驱动文件夹无 exe → 设备管理器手动指定文件夹安装"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "任务 1-3：用面包板搭基础电路（3.3V / GND 分配）",
+          "任务 1-4：驱动 DHT11/DHT22 温湿度传感器"
+        ]
+      }
+    ]
+  }
+];
+
+// ========== RENDER: LOGS ==========
+function renderLogs() {
+  const container = document.getElementById("log-list");
+  container.innerHTML = LOGS.map(log => {
+    const sectionsHtml = log.sections.map(sec => {
+      const itemsHtml = sec.items.map(it => `<li>${it}</li>`).join("");
+      return `<div class="log-section">
+        <div class="log-section-label">${sec.label}</div>
+        <ul class="log-items">${itemsHtml}</ul>
+      </div>`;
+    }).join("");
+    return `<div class="log-card">
+      <div class="log-header">
+        <span class="log-date">${log.title}</span>
+      </div>
+      <div class="log-body">${sectionsHtml}</div>
+    </div>`;
+  }).join("");
+}
+
 // ========== INIT ==========
 function init() {
   renderWeeks();
@@ -973,6 +1092,7 @@ function init() {
   renderChecklist();
   renderSkills();
   renderResources();
+  renderLogs();
   updateStats();
 }
 
