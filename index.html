@@ -1003,6 +1003,42 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ========== DATA: LOGS ==========
 const LOGS = [
   {
+    date: "2026-07-31",
+    title: "📅 Day 3 · 面包板基础电路搭建",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "任务 1-3 完成：面包板电源轨分配（3.3V / GND）",
+          "ESP32 的 3.3V → 面包板 + 轨，GND → − 轨",
+          "HW-269 LED 模块验证电源轨成功（LED 亮起）"
+        ]
+      },
+      {
+        label: "📝 新知识点",
+        items: [
+          "面包板电源轨横向整条贯通，中间孔区每列纵向连通",
+          "HW-269 LED 模块：G=GND, +=VCC, S=信号（高电平亮），自带 R1 限流电阻",
+          "面包板 +/− 轨不是全局通的，要确认器件都在同一侧"
+        ]
+      },
+      {
+        label: "⚡ 踩坑记录",
+        items: [
+          "LED 不亮 → 面包板电源轨中间有断点，左右两半不连通，接线须在同一侧",
+          "LED 模块最初误判为 G/-/S，用户纠正中间是 + 才对"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "任务 1-6：HC-SR501 人体红外传感器（三根线，最简单）",
+          "任务 1-4：DHT11 温湿度传感器（需装库 DHT sensor library）"
+        ]
+      }
+    ]
+  },
+  {
     date: "2026-07-30 下午",
     title: "📅 Day 2 · ESP32 功能验证 — WiFi · 串口 · Web 服务器",
     sections: [
