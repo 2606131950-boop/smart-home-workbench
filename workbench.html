@@ -1003,6 +1003,37 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ========== DATA: LOGS ==========
 const LOGS = [
   {
+    date: "2026-08-01",
+    title: "📅 Day 5 · BH1750 光照度传感器",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "任务 1-5 完成：BH1750 光照度传感器驱动成功 ✅",
+          "接线：VCC→+轨、GND→-轨、SDA→GPIO21、SCL→GPIO22（I2C 接口）",
+          "库：BH1750 by Christopher Laws v1.3.0",
+          "验证通过：手遮光数值降到个位数，手电筒照数值飙升"
+        ]
+      },
+      {
+        label: "📝 新知识点",
+        items: [
+          "I2C 通信只需两根线 SDA+SCL，挂多个设备不冲突",
+          "GPIO 21/22 是 ESP32 默认 I2C，都是安全脚，上传不用拔线",
+          "BH1750 精度 1 lx，量程 1-65535 lx，比光敏电阻准很多"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "任务 1-6：HC-SR501 人体红外传感器",
+          "任务 1-7：继电器 + LED 控制",
+          "任务 1-8：OLED 实时显示所有传感器数据"
+        ]
+      }
+    ]
+  },
+  {
     date: "2026-07-31 晚间",
     title: "📅 Day 4 · DHT22 温湿度传感器（大量踩坑）",
     sections: [
