@@ -1,0 +1,32 @@
+{
+  "configurations": [
+    {
+      "name": "ESP32",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "C:/Users/lenovo/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.11/cores/esp32",
+        "C:/Users/lenovo/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.11/variants/esp32",
+        "C:/Users/lenovo/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.11/libraries/**",
+        "C:/Users/lenovo/AppData/Local/Arduino15/packages/esp32/tools/esp32-libs/3.3.11/include/**",
+        "C:/Users/lenovo/AppData/Local/Arduino15/packages/esp32/tools/esp32-libs/3.3.11/qio_qspi/include",
+        "C:/Users/lenovo/OneDrive/Documents/Arduino/libraries/BH1750/src",
+        "C:/Users/lenovo/OneDrive/Documents/Arduino/libraries/DHT_sensor_library",
+        "C:/Users/lenovo/OneDrive/Documents/Arduino/libraries/Adafruit_Unified_Sensor"
+      ],
+      "defines": [
+        "ARDUINO=10607",
+        "ARDUINO_ESP32_DEV",
+        "ARDUINO_ARCH_ESP32",
+        "ESP32=ESP32",
+        "CORE_DEBUG_LEVEL=0",
+        "BOARD_HAS_PSRAM",
+        "F_CPU=240000000L"
+      ],
+      "compilerPath": "C:/Users/lenovo/AppData/Local/Arduino15/packages/esp32/tools/esp-x32/2601/bin/xtensa-esp32-elf-gcc.exe",
+      "cStandard": "c11",
+      "cppStandard": "c++11",
+      "intelliSenseMode": "gcc-x86"
+    }
+  ],
+  "version": 4
+}
