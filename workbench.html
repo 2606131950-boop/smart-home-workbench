@@ -1003,6 +1003,43 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ========== DATA: LOGS ==========
 const LOGS = [
   {
+    date: "2026-08-04",
+    title: "📅 Day 8 · OLED 实时显示 + 全传感器整合",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "任务 1-8 完成：OLED 实时显示所有传感器数据 ✅",
+          "5 个模块全部上线：DHT22 + BH1750 + HC-SR501 + 继电器 + OLED",
+          "OLED 接线：GND→GND、VCC→3.3V、SCL→GPIO 22、SDA→GPIO 21",
+          "BH1750 和 OLED 共用 I2C 总线（SDA=21/SCL=22）",
+          "DHT22 从 GPIO 4 换到 GPIO 5（HC-SR501 占了 D4）",
+          "加入自动控制：检测到人 → 继电器 ON，人走 → 继电器 OFF ✅",
+          "装了两个新库：Adafruit SSD1306 + Adafruit GFX Library"
+        ]
+      },
+      {
+        label: "📝 新知识点",
+        items: [
+          "OLED I2C 地址默认 0x3C（不亮试试 0x3D）",
+          "I2C 总线可以挂多个设备，共用同一对 SDA/SCL 引脚",
+          "SSD1306 是驱动芯片，128×64 像素，单色（非彩色）",
+          "fillRect 可以画反白效果（有人时 PIR 状态高亮）",
+          "继电器在系统中是被控对象，需要逻辑驱动，不是传感器"
+        ]
+      },
+      {
+        label: "🎉 Week 1 总结",
+        items: [
+          "Week 1 硬件搭建全部完成 8/8 ✅",
+          "所有传感器的数据都能在 OLED 上实时看到",
+          "面包板上跑了 5 个模块，3.3V/5V/GND 三轨道联动",
+          "Next: Week 2 联网 + MQTT（8.06 — 8.12）"
+        ]
+      }
+    ]
+  },
+  {
     date: "2026-08-03",
     title: "📅 Day 7 · 继电器 + LED 灯控制",
     sections: [
@@ -1035,8 +1072,8 @@ const LOGS = [
       {
         label: "🔜 下一步",
         items: [
-          "任务 1-8：OLED 实时显示所有传感器数据",
-          "Week 1 收尾！只剩 1 个任务"
+          "✅ Week 1 已在 Day 8 全部完成！8/8",
+          "下周：Week 2 联网 + MQTT（8.06 — 8.12）"
         ]
       }
     ]
