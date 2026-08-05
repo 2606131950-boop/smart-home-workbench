@@ -1003,6 +1003,51 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ========== DATA: LOGS ==========
 const LOGS = [
   {
+    date: "2026-08-05",
+    title: "📅 Day 9 · WiFi + MQTT 数据上云",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "Week 2 Day 1：ESP32 成功连接 WiFi，获得 IP 192.168.1.109 ✅",
+          "Week 2 Day 2：注册 EMQX Cloud Serverless 免费 MQTT Broker ✅",
+          "学习 MQTT 协议：Broker / Topic / Publish / Subscribe ✅",
+          "安装 PubSubClient 库，通过 TLS 加密连接 MQTT ✅",
+          "编写 mqtt_test.ino，5 秒一次把传感器数据以 JSON 发上云 ✅",
+          "OLED 同步显示 WiFi 和 MQTT 连接状态 ✅",
+          "验证数据上报成功：temp/humi/lux/pir/relay 全部正常 ✅"
+        ]
+      },
+      {
+        label: "📝 新知识点",
+        items: [
+          "MQTT 就像微信群：ESP32 发消息，Python 订阅收消息，Broker 是群主",
+          "EMQX Cloud Serverless 免费版只开 8883 端口（TLS），要带 CA 证书",
+          "ESP32 只支持 2.4GHz WiFi，不能连 5GHz 频段",
+          "TLS 证书验证需要正确时间，所以代码里要先同步 NTP 时间",
+          "I2C 扫描器是排障神器：能判断传感器是地址错还是没连上"
+        ]
+      },
+      {
+        label: "⚠️ 踩坑",
+        items: [
+          "上传报错 No serial data received → 传感器同时插着导致供电不足",
+          "解决：上传前拔掉所有传感器 VCC，上传成功后再插回",
+          "BH1750 Device is not configured → 模块接触不良，重新插紧解决",
+          "用 I2C 扫描器确认 OLED=0x3C、BH1750=0x23，地址没问题"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "Week 2 Day 3-4：Python 订阅 MQTT 数据并存入 MySQL",
+          "安装 Python + paho-mqtt + pymysql",
+          "写 mqtt_to_mysql.py 脚本"
+        ]
+      }
+    ]
+  },
+  {
     date: "2026-08-04",
     title: "📅 Day 8 · OLED 实时显示 + 全传感器整合",
     sections: [
