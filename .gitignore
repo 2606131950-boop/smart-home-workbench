@@ -4,3 +4,9 @@
 *.py
 __pycache__/
 .DS_Store
+
+# Python 项目依赖隔离
+venv/
+
+# 但保留项目源码
+!python-code/*.py

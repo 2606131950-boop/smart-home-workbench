@@ -1003,6 +1003,49 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ========== DATA: LOGS ==========
 const LOGS = [
   {
+    date: "2026-08-06",
+    title: "📅 Day 10 · Python 订阅 MQTT 数据",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "搭建 Python 虚拟环境（venv），安装 paho-mqtt ✅",
+          "编写 python-code/mqtt_subscriber.py，连接 EMQX Cloud ✅",
+          "Python 端成功订阅 sensor/data Topic ✅",
+          "实时解析 ESP32 发来的 JSON 数据并打印 ✅",
+          "完整链路验证：ESP32 → WiFi → EMQX Cloud → Python ✅",
+          "Week 2 全部完成 5/5 ✅"
+        ]
+      },
+      {
+        label: "📝 新知识点",
+        items: [
+          "paho-mqtt 2.x VERSION2 回调签名和 1.x 不同，参数个数要注意",
+          "on_disconnect 在 VERSION2 下需要 5 个参数（含 disconnect_flags）",
+          "固定 client_id 容易和服务器残留会话冲突，每次随机生成更稳",
+          "clean_session=True 可以避免旧会话影响新连接",
+          "Python 虚拟环境（venv）能隔离项目依赖，不污染全局环境"
+        ]
+      },
+      {
+        label: "⚠️ 踩坑",
+        items: [
+          "报错 on_disconnect takes 4 args but 5 given → 回调函数少写一个参数",
+          "连接反复断开 Unspecified error → 固定 client_id 冲突，改随机 ID 解决",
+          "运行脚本前要先 cd 到 python-code 目录，否则找不到 venv"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "Week 3：安装 MySQL 数据库",
+          "写 mqtt_to_mysql.py：收到 MQTT 数据后存入数据库",
+          "数据库设计：sensor_data 表（时间/温度/湿度/光照/人体/继电器）"
+        ]
+      }
+    ]
+  },
+  {
     date: "2026-08-05",
     title: "📅 Day 9 · WiFi + MQTT 数据上云",
     sections: [
