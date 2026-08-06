@@ -91,6 +91,7 @@ Adafruit_SSD1306  display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 unsigned long lastPublish = 0;
 const long    PUBLISH_INTERVAL = 5000;  // 5 秒发一次
+int           lastPir = -1;              // 记住上次 PIR 状态，变化时立即发送
 
 // ============ 时间同步（TLS 必需）============
 void syncTime() {
@@ -315,7 +316,17 @@ void loop() {
 
   // ---- 定时发布 MQTT ----
   unsigned long now = millis();
-  if (now - lastPublish >= PUBLISH_INTERVAL) {
+  bool shouldPublish = (now - lastPublish >= PUBLISH_INTERVAL);  // 5 秒到了
+
+  // PIR 状态变化 → 立刻发一条，不等到 5 秒
+  if (lastPir != -1 && pir != lastPir) {
+    Serial.print("⚠ PIR 变化: ");
+    Serial.print(lastPir ? "有人→无人" : "无人→有人");
+    shouldPublish = true;
+  }
+  lastPir = pir;
+
+  if (shouldPublish) {
     lastPublish = now;
 
     // MQTT 重连（双重保险）
