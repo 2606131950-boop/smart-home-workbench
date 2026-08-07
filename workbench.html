@@ -286,6 +286,49 @@ body {
   font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
 }
 .save-target-input button:hover { opacity: 0.9; }
+.save-target-input .btn-reset { background: var(--red); margin-left: 4px; }
+.save-target-input .btn-reset:hover { opacity: 0.85; }
+.save-target-input select {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-family: inherit; outline: none; background: var(--surface); color: var(--text2);
+  cursor: pointer; max-width: 96px;
+}
+.save-target-input select:focus { border-color: var(--accent); }
+
+/* 逐月计划·滚动分摊 */
+.save-plan-card { grid-column: 1 / -1; }
+.mp-summary { font-size: 13px; color: var(--text2); margin-bottom: 14px; line-height: 1.7; }
+.mp-summary b { color: var(--text); }
+.mp-table { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.mp-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr; align-items: center;
+  padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.mp-del {
+  border: none; background: #fdeaea; color: var(--red);
+  width: 28px; height: 28px; border-radius: 7px; font-size: 16px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s; line-height: 1;
+}
+.mp-del:hover { background: #f8d7d7; }
+.mp-op { text-align: right; }
+.mp-row:last-child { border-bottom: none; }
+.mp-row.mp-head { background: var(--bg); color: var(--text3); font-size: 12px; font-weight: 600; }
+.mp-m { font-weight: 600; color: var(--text); }
+.mp-t { color: var(--accent); font-weight: 600; }
+.mp-a { color: var(--text2); }
+.mp-s { text-align: right; }
+.mp-tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.mp-ok { background: #e6f9f3; color: var(--green); }
+.mp-no { background: #fdeaea; color: var(--red); }
+.mp-now { background: #e8f4fd; color: var(--accent); }
+.mp-fut { background: var(--bg); color: var(--text3); }
+.mp-row.current { background: #f4f9ff; }
+.mp-row.done .mp-m { color: var(--text2); }
+.mp-row.done { opacity: 0.75; }
+.mp-tip { margin-top: 14px; padding: 12px 14px; background: var(--bg); border-radius: 8px; font-size: 13px; color: var(--text2); line-height: 1.6; }
+.mp-tip b { color: var(--text); }
 
 /* ========== CHECKLIST TAB ========== */
 .checklist-container { display: flex; flex-direction: column; gap: 16px; max-width: 600px; }
@@ -457,11 +500,13 @@ body {
         <div class="save-detail">
           <p>已存：<b id="save-current">¥0</b> / <b>¥5,000</b></p>
           <p>剩余：<b id="save-remain">¥5,000</b></p>
-          <p style="margin-top:8px;color:var(--text3)">目标日期：2027年3月</p>
+          <p style="margin-top:8px;color:var(--text3)">目标日期：2027年2月底</p>
         </div>
         <div class="save-target-input">
+          <select id="save-month" title="选择记录到哪个月"></select>
           <input type="number" id="save-add" placeholder="添加存款金额" step="1" min="1">
           <button onclick="addSave()">+ 存入</button>
+          <button class="btn-reset" onclick="resetSave()">清零</button>
         </div>
       </div>
       <div class="save-card">
@@ -470,6 +515,18 @@ body {
         <div style="margin-top:16px;padding:12px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--text2)">
           💡 每月摊不到 <b>100元</b>，不影响5000目标。控制网购是关键。
         </div>
+      </div>
+      <!-- 逐月计划·滚动分摊 -->
+      <div class="save-card save-plan-card">
+        <h3>📅 逐月计划 · 滚动分摊</h3>
+        <div class="mp-summary" id="mp-summary"></div>
+        <div class="mp-table">
+          <div class="mp-row mp-head">
+            <span>月份</span><span>建议存</span><span>实存</span><span style="text-align:right">状态</span><span style="text-align:right">操作</span>
+          </div>
+          <div id="save-month-plan"></div>
+        </div>
+        <div class="mp-tip" id="mp-tip"></div>
       </div>
     </div>
   </div>
@@ -800,17 +857,185 @@ function renderSave() {
     <tr><th>项目</th><th>费用</th></tr>
     ${RACE_BUDGET.map(x => `<tr><td>${x.item}</td><td class="${x.status}">¥${x.cost}</td></tr>`).join("")}
     <tr><td>合计</td><td>¥${totalSpent}</td></tr>`;
+
+  renderMonthlyPlan();
 }
 
 function addSave() {
   const input = document.getElementById("save-add");
   const val = parseInt(input.value);
   if (!val || val <= 0) { alert("请输入有效金额"); return; }
+  const sel = document.getElementById("save-month");
+  const key = (sel && sel.value) || curMonthKey();
+  const byMonth = state.saveByMonth || {};
+  byMonth[key] = (Number(byMonth[key]) || 0) + val;
+  save("saveByMonth", byMonth);
   const current = Number(state.saveCurrent || 0);
   save("saveCurrent", current + val);
   input.value = "";
   renderSave();
   updateStats();
+}
+
+function delSaveMonth(key) {
+  try {
+    const byMonth = state.saveByMonth || {};
+    const amt = Number(byMonth[key]) || 0;
+    if (amt <= 0) return;
+    delete byMonth[key];
+    save("saveByMonth", byMonth);
+    const current = Number(state.saveCurrent || 0);
+    save("saveCurrent", Math.max(0, current - amt));
+    renderSave();
+    updateStats();
+  } catch (e) {
+    console.error("delSaveMonth error:", e);
+    const tip = document.getElementById("mp-tip");
+    if (tip) tip.innerHTML = `<span style="color:var(--red)">删除出错: ${e.message}</span>`;
+  }
+}
+
+let _resetArmed = false, _resetTimer = null;
+function resetSave() {
+  try {
+    const btn = document.querySelector(".btn-reset");
+    if (_resetArmed) {
+      _resetArmed = false;
+      clearTimeout(_resetTimer);
+      if (btn) { btn.textContent = "清零"; btn.style.background = ""; }
+      save("saveByMonth", {});
+      save("saveCurrent", 0);
+      renderSave();
+      updateStats();
+      return;
+    }
+    _resetArmed = true;
+    if (btn) { btn.textContent = "再点确认"; btn.style.background = "#a02020"; }
+    _resetTimer = setTimeout(() => {
+      _resetArmed = false;
+      if (btn) { btn.textContent = "清零"; btn.style.background = ""; }
+    }, 3000);
+  } catch (e) {
+    console.error("resetSave error:", e);
+    if (btn) btn.textContent = "清零";
+  }
+}
+
+// ========== SAVE PLAN: 逐月滚动分摊 ==========
+const SAVE_GOAL = 5000;
+const PLAN_START = "2026-09";
+const PLAN_END = "2027-02";
+
+function curMonthKey(d) {
+  d = d || new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+function buildPlanMonths() {
+  const [sy, sm] = PLAN_START.split("-").map(Number);
+  const [ey, em] = PLAN_END.split("-").map(Number);
+  const list = [];
+  let y = sy, m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    list.push({ key: y + "-" + String(m).padStart(2, "0"), label: m + "月" });
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  return list;
+}
+function fmtMoney(n) { return "¥" + Number(n).toLocaleString(); }
+function fmtMonth(key) { const [y, m] = key.split("-").map(Number); return `${y}年${m}月`; }
+
+function renderMonthlyPlan() {
+  const el = document.getElementById("save-month-plan");
+  if (!el) return;
+  const byMonth = state.saveByMonth || {};
+  const total = Number(state.saveCurrent || 0);
+  const monthlySum = Object.keys(byMonth).reduce((s, k) => s + (Number(byMonth[k]) || 0), 0);
+  const baseline = Math.max(total - monthlySum, 0); // 计划开始前已存（兼容旧数据）
+
+  const months = buildPlanMonths();
+  const curKey = curMonthKey();
+  let curIdx = months.findIndex(x => x.key === curKey);
+  if (curIdx < 0) curIdx = curKey < PLAN_START ? 0 : months.length - 1;
+
+  // 每月起始时的累计（不含本月）
+  let cum = baseline;
+  const beforeCum = months.map(m => { const v = cum; cum += (Number(byMonth[m.key]) || 0); return v; });
+
+  // 本月建议 = 剩余 ÷ 从本月起的月数
+  const monthsFromCur = months.length - curIdx;
+  const curRemain = Math.max(SAVE_GOAL - beforeCum[curIdx], 0);
+  const curTarget = curRemain > 0 && monthsFromCur > 0 ? Math.ceil(curRemain / monthsFromCur) : 0;
+
+  // 未来月建议：把本月已存算进去后重算 —— 前月多存则降、少存则升
+  const curSaved = Number(byMonth[months[curIdx].key]) || 0;
+  const curEffSaved = curSaved > 0 ? curSaved : curTarget; // 本月还没存时按建议算，避免未来月突然跳涨
+  const futureRemain = Math.max(SAVE_GOAL - beforeCum[curIdx] - curEffSaved, 0);
+  const futureCount = months.length - curIdx - 1;
+  const futureTarget = futureRemain > 0 && futureCount > 0 ? Math.ceil(futureRemain / futureCount) : 0;
+
+  const rows = months.map((m, i) => {
+    const actual = Number(byMonth[m.key]) || 0;
+    let target, status;
+    if (i < curIdx) {
+      const mRemain = Math.max(SAVE_GOAL - beforeCum[i], 0);
+      const mLeft = months.length - i;
+      target = mRemain > 0 && mLeft > 0 ? Math.ceil(mRemain / mLeft) : 0;
+      status = actual >= target ? "done" : "short";
+    } else if (i === curIdx) {
+      target = curTarget; status = "current";
+    } else {
+      target = futureTarget; status = "future";
+    }
+    return { key: m.key, label: m.label, target, actual, status };
+  });
+
+  // 汇总
+  document.getElementById("mp-summary").innerHTML =
+    `从 <b>${fmtMonth(PLAN_START)}</b> 到 <b>${fmtMonth(PLAN_END)}</b>，共 <b>${months.length}</b> 个月 · 均摊 <b>${fmtMoney(Math.ceil(SAVE_GOAL / months.length))}</b>/月`
+    + (baseline > 0 ? ` · 计划前已存 <b>${fmtMoney(baseline)}</b>` : "");
+
+  // 提示
+  const tip = document.getElementById("mp-tip");
+  if (curSaved > 0) {
+    const diff = curSaved - curTarget;
+    if (diff > 0) tip.innerHTML = `✅ 本月多存 ${fmtMoney(diff)}，后续每月降至 <b>${fmtMoney(futureTarget)}</b>`;
+    else if (diff < 0) tip.innerHTML = `⚠️ 本月少存 ${fmtMoney(-diff)}，后续每月需升至 <b>${fmtMoney(futureTarget)}</b>`;
+    else tip.innerHTML = `👌 本月刚好存够 <b>${fmtMoney(curTarget)}</b>，后续保持 ${fmtMoney(futureTarget)}`;
+  } else {
+    tip.innerHTML = `💡 本月建议存 <b>${fmtMoney(curTarget)}</b>，存入后后续建议会即时滚动调整`;
+  }
+
+  // 行
+  const badges = {
+    done: `<span class="mp-tag mp-ok">✓ 达成</span>`,
+    short: `<span class="mp-tag mp-no">差 ${fmtMoney(0)} 已分摊</span>`,
+    current: `<span class="mp-tag mp-now">本月</span>`,
+    future: `<span class="mp-tag mp-fut">待存</span>`
+  };
+  el.innerHTML = rows.map(r => {
+    const badge = r.status === "short"
+      ? `<span class="mp-tag mp-no">差 ${fmtMoney(r.target - r.actual)} 已分摊</span>`
+      : badges[r.status];
+    const actualTxt = (r.status === "future") ? "—" : fmtMoney(r.actual);
+    const delBtn = r.actual > 0
+      ? `<button class="mp-del" onclick="delSaveMonth('${r.key}')" title="删除${r.label}存款记录">×</button>`
+      : "";
+    return `<div class="mp-row ${r.status}">
+      <span class="mp-m">${r.label}</span>
+      <span class="mp-t">${fmtMoney(r.target)}</span>
+      <span class="mp-a">${actualTxt}</span>
+      <span class="mp-s">${badge}</span>
+      <span class="mp-op">${delBtn}</span>
+    </div>`;
+  }).join("");
+
+  // 月份选择器（首次填充，默认本月）
+  const sel = document.getElementById("save-month");
+  if (sel && !sel.options.length) {
+    sel.innerHTML = months.map(m =>
+      `<option value="${m.key}" ${m.key === curKey ? "selected" : ""}>${m.label}</option>`
+    ).join("");
+  }
 }
 
 // ========== RENDER: CHECKLIST ==========
