@@ -1228,6 +1228,51 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ========== DATA: LOGS ==========
 const LOGS = [
   {
+    date: "2026-08-08",
+    title: "📅 Day 11 · 全链路端到端联调 ✅",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "Flask API 启动（localhost:5000），4 个接口全部正常 ✅",
+          "API 验证：/api/latest（实时）、/api/history（历史）、/api/stats（统计）、/api/relay（控制）✅",
+          "MQTT 订阅线程连接 EMQX Cloud，接收 ESP32 传感器数据存入 SQLite ✅",
+          "继电器控制验证：POST /api/relay → MQTT 发布 → ESP32 接收 → 继电器动作 ✅",
+          "Web 面板（panel.html）实时显示温度/湿度/光照/PIR/继电器状态 ✅",
+          "手机连同一 WiFi（192.168.1.100）访问面板，每秒轮询最新数据 ✅",
+          "全链路：ESP32 → WiFi → EMQX Cloud → Python → SQLite → Flask API → Web 面板 → 手机 🎉"
+        ]
+      },
+      {
+        label: "📊 数据统计",
+        items: [
+          "数据库累计 4400 条记录（8月1日至今）",
+          "今日 60 条（ESP32 凌晨 06:23 上电运行约 1 分钟）",
+          "温度范围 28.6~33.0°C / 湿度 60.8~94.3% / PIR 检测 44 次",
+          "数据发送间隔约 2 秒/条，与 ESP32 代码设定一致"
+        ]
+      },
+      {
+        label: "📝 新知识点",
+        items: [
+          "全链路架构：ESP32（感知层）→ MQTT（传输层）→ Python+SQLite（存储层）→ Flask（应用层）→ Web（展示层）",
+          "Flask 可同时跑 API 和后台 MQTT 订阅线程，用 threading 即可",
+          "手机和电脑在同一局域网内，手机浏览器直接访问 电脑IP:5000/panel 即可",
+          "EMQX Cloud Serverless 的 TLS 握手需 2-3 秒，首次连接有延迟属正常"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "代码整理 + 加注释 + 写配置文档（任务 3-7）",
+          "录演示视频 + 暑假总结（任务 4-7）",
+          "优化：ESP32 断线自动重连、MQTT QoS 1 保证不丢消息",
+          "可选：加 OLED 显示 IP 地址、加定时任务（如检测到人自动开灯）"
+        ]
+      }
+    ]
+  },
+  {
     date: "2026-08-06",
     title: "📅 Day 10 · Python 订阅 MQTT 数据",
     sections: [
