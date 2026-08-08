@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="智能家居">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="manifest" href="/static/manifest.json">
+<title>智能家居</title>
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #fff;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .container { max-width: 500px; margin: 0 auto; }
+
+  .header {
+    text-align: center;
+    padding: 20px 0 10px;
+  }
+  .header h1 { font-size: 22px; color: #00d4aa; }
+  .header .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #888;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ff4757;
+    display: inline-block;
+  }
+  .dot.online { background: #00d4aa; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .card:active { transform: scale(0.97); }
+
+  .card .icon { font-size: 28px; margin-bottom: 6px; }
+  .card .label { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+  .card .value { font-size: 26px; font-weight: 700; }
+  .card .unit { font-size: 14px; color: #888; }
+
+  .temp .value { color: #ff6b6b; }
+  .humi .value { color: #74b9ff; }
+  .lux .value { color: #ffeaa7; }
+
+  /* ---- PIR / 继电器状态条 ---- */
+  .status-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0;
+  }
+
+  .status-badge {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+  }
+  .status-badge .label { font-size: 12px; color: #aaa; margin-bottom: 6px; }
+  .status-badge .status-text {
+    font-size: 18px;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+
+  .pir-on { background: #ff4757; color: #fff; }
+  .pir-off { background: rgba(255,255,255,0.08); color: #666; }
+
+  .relay-on { background: #00d4aa; color: #000; }
+  .relay-off { background: rgba(255,255,255,0.08); color: #666; }
+
+  /* ---- 控制按钮 ---- */
+  .btn-row { display: flex; gap: 12px; margin: 12px 0; }
+
+  .btn {
+    flex: 1;
+    border: none;
+    border-radius: 16px;
+    padding: 18px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #fff;
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-on {
+    background: linear-gradient(135deg, #00b894, #00d4aa);
+    color: #000;
+  }
+  .btn-off {
+    background: linear-gradient(135deg, #636e72, #747d8c);
+    color: #fff;
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  /* ---- 最新更新时间 ---- */
+  .update-time {
+    text-align: center;
+    font-size: 12px;
+    color: #555;
+    margin-top: 16px;
+  }
+
+  /* ---- ECharts 图表区域 ---- */
+  .chart-area {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 14px 12px 12px;
+    margin-top: 16px;
+  }
+  .chart-area h3 {
+    font-size: 14px;
+    color: #aaa;
+    margin-bottom: 4px;
+  }
+  .chart-area .chart-range {
+    font-size: 11px;
+    color: #555;
+    font-weight: normal;
+  }
+  #main-chart {
+    width: 100%;
+    height: 220px;
+  }
+
+  /* ---- 响应式 ---- */
+  @media (max-width: 380px) {
+    .card .value { font-size: 22px; }
+    .btn { padding: 14px; font-size: 14px; }
+    #main-chart { height: 180px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>🏠 智能家居</h1>
+    <div class="status-bar">
+      <span id="status-dot" class="dot"></span>
+      <span id="status-text">正在连接...</span>
+    </div>
+  </div>
+
+  <!-- 传感器卡片 -->
+  <div class="cards">
+    <div class="card temp">
+      <div class="icon">🌡️</div>
+      <div class="label">温度</div>
+      <div class="value" id="val-temp">--</div>
+      <div class="unit">°C</div>
+    </div>
+    <div class="card humi">
+      <div class="icon">💧</div>
+      <div class="label">湿度</div>
+      <div class="value" id="val-humi">--</div>
+      <div class="unit">%</div>
+    </div>
+    <div class="card lux">
+      <div class="icon">☀️</div>
+      <div class="label">光照</div>
+      <div class="value" id="val-lux">--</div>
+      <div class="unit">lx</div>
+    </div>
+    <div class="card" style="grid-column: span 2;">
+      <div style="display:flex;justify-content:space-around;">
+        <div>
+          <div class="label" style="margin-bottom:4px;">人体检测</div>
+          <span class="status-text pir-off" id="pir-badge">无人</span>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:4px;">继电器</div>
+          <span class="status-text relay-off" id="relay-badge">关闭</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 继电器控制按钮 -->
+  <div class="btn-row">
+    <button class="btn btn-on" id="btn-on" onclick="sendRelayCommand('on')">继电器开</button>
+    <button class="btn btn-off" id="btn-off" onclick="sendRelayCommand('off')">继电器关</button>
+    <button class="btn" id="btn-auto" style="background:linear-gradient(135deg,#0984e3,#74b9ff);color:#fff;" onclick="sendRelayCommand('auto')">自动</button>
+  </div>
+  <div class="update-time" id="relay-mode">模式: 自动（人体感应控制）</div>
+
+  <!-- ECharts 温湿度折线图 -->
+  <div class="chart-area">
+    <h3>📊 温湿度实时趋势 <span class="chart-range" id="chart-range">最近 30 条</span></h3>
+    <div id="main-chart"></div>
+  </div>
+
+  <div class="update-time" id="update-time"></div>
+</div>
+
+<script>
+// ============ 配置 ============
+const API_BASE = window.location.origin;  // 和 Flask 同域
+const POLL_INTERVAL = 1000;   // 每 1 秒刷新
+const MAX_POINTS = 30;        // 图表最多显示 30 个数据点
+
+// ============ 状态 ============
+let online = false;
+let chart = null;
+let chartTimes = [];
+let chartTemps = [];
+let chartHumis = [];
+
+// ============ DOM 引用 ============
+const $ = (id) => document.getElementById(id);
+const statusDot = $("status-dot");
+const statusText = $("status-text");
+const updateTime = $("update-time");
+
+// ============ ECharts 初始化 ============
+function initChart() {
+  chart = echarts.init($("main-chart"));
+
+  chart.setOption({
+    backgroundColor: "transparent",
+    grid: { left: 44, right: 44, top: 32, bottom: 24 },
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: "rgba(15,12,41,0.92)",
+      borderColor: "rgba(255,255,255,0.12)",
+      textStyle: { color: "#fff", fontSize: 12 },
+      formatter: function(params) {
+        let s = params[0].axisValue + "<br/>";
+        params.forEach(p => {
+          s += p.marker + " " + p.seriesName + ": " + p.value + "<br/>";
+        });
+        return s;
+      }
+    },
+    legend: {
+      data: ["温度 °C", "湿度 %"],
+      textStyle: { color: "#aaa", fontSize: 11 },
+      top: 0,
+      right: 8,
+      itemWidth: 12,
+      itemHeight: 8
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: [],
+      axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
+      axisLabel: { color: "#555", fontSize: 9, hideOverlap: true },
+      axisTick: { show: false }
+    },
+    yAxis: [
+      {
+        type: "value",
+        name: "°C",
+        position: "left",
+        nameTextStyle: { color: "#ff6b6b", fontSize: 10 },
+        axisLine: { show: true, lineStyle: { color: "rgba(255,107,107,0.35)" } },
+        axisLabel: { color: "#ff6b6b", fontSize: 9 },
+        splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
+        axisTick: { show: false }
+      },
+      {
+        type: "value",
+        name: "%",
+        position: "right",
+        nameTextStyle: { color: "#74b9ff", fontSize: 10 },
+        axisLine: { show: true, lineStyle: { color: "rgba(116,185,255,0.35)" } },
+        axisLabel: { color: "#74b9ff", fontSize: 9 },
+        splitLine: { show: false },
+        axisTick: { show: false }
+      }
+    ],
+    series: [
+      {
+        name: "温度 °C",
+        type: "line",
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 4,
+        showSymbol: false,
+        data: [],
+        lineStyle: { color: "#ff6b6b", width: 2 },
+        itemStyle: { color: "#ff6b6b" },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(255,107,107,0.22)" },
+            { offset: 1, color: "rgba(255,107,107,0)" }
+          ])
+        },
+        yAxisIndex: 0
+      },
+      {
+        name: "湿度 %",
+        type: "line",
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 4,
+        showSymbol: false,
+        data: [],
+        lineStyle: { color: "#74b9ff", width: 2 },
+        itemStyle: { color: "#74b9ff" },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(116,185,255,0.22)" },
+            { offset: 1, color: "rgba(116,185,255,0)" }
+          ])
+        },
+        yAxisIndex: 1
+      }
+    ]
+  });
+
+  // 窗口大小变化时自适应
+  window.addEventListener("resize", function() {
+    if (chart) chart.resize();
+  });
+}
+
+// ============ 加载历史数据 ============
+async function loadHistory() {
+  try {
+    const resp = await fetch(API_BASE + "/api/history?limit=" + MAX_POINTS);
+    const json = await resp.json();
+    if (json.ok && json.data && json.data.length > 0) {
+      // history 返回 DESC（最新在前），反转为时间正序
+      const data = json.data.reverse();
+      chartTimes = data.map(function(d) {
+        return d.timestamp ? d.timestamp.slice(11, 19) : "";
+      });
+      chartTemps = data.map(function(d) { return d.temperature; });
+      chartHumis = data.map(function(d) { return d.humidity; });
+      updateChartData();
+
+      // 更新范围标签
+      if (chartTemps.length > 0) {
+        var tMin = Math.min.apply(null, chartTemps.filter(function(v){return v!==null;}));
+        var tMax = Math.max.apply(null, chartTemps.filter(function(v){return v!==null;}));
+        var hMin = Math.min.apply(null, chartHumis.filter(function(v){return v!==null;}));
+        var hMax = Math.max.apply(null, chartHumis.filter(function(v){return v!==null;}));
+        $("chart-range").textContent = tMin.toFixed(1) + "~" + tMax.toFixed(1) +
+          "°C / " + hMin.toFixed(0) + "~" + hMax.toFixed(0) + "%";
+      }
+    }
+  } catch (e) {
+    console.error("加载历史数据失败:", e);
+  }
+}
+
+// ============ 更新图表数据 ============
+function updateChartData() {
+  if (!chart) return;
+  chart.setOption({
+    xAxis: { data: chartTimes },
+    series: [
+      { data: chartTemps },
+      { data: chartHumis }
+    ]
+  });
+}
+
+// ============ 追加新数据点 ============
+function appendPoint(d) {
+  if (!chart) return;
+  var now = new Date();
+  var t = now.toTimeString().slice(0, 8);
+  chartTimes.push(t);
+  chartTemps.push(d.temperature);
+  chartHumis.push(d.humidity);
+
+  // 保持最多 MAX_POINTS 个点
+  if (chartTimes.length > MAX_POINTS) {
+    chartTimes.shift();
+    chartTemps.shift();
+    chartHumis.shift();
+  }
+  updateChartData();
+}
+
+// ============ 轮询数据 ============
+async function fetchData() {
+  try {
+    const resp = await fetch(API_BASE + "/api/latest");
+    const json = await resp.json();
+
+    if (!json.ok || !json.data) {
+      setOffline("无数据");
+      return;
+    }
+
+    const d = json.data;
+    updateDisplay(d);
+
+    // 有有效温度数据时追加到折线图
+    if (d.temperature !== null && d.temperature !== undefined) {
+      appendPoint(d);
+    }
+
+    setOnline();
+  } catch (e) {
+    setOffline("连接失败");
+  }
+}
+
+// ============ 更新显示 ============
+function updateDisplay(d) {
+  $("val-temp").textContent = d.temperature !== null ? d.temperature.toFixed(1) : "--";
+  $("val-humi").textContent = d.humidity !== null ? d.humidity.toFixed(1) : "--";
+  $("val-lux").textContent  = d.lux !== null ? Math.round(d.lux) : "--";
+
+  // PIR 状态
+  const pirBadge = $("pir-badge");
+  if (d.pir === 1) {
+    pirBadge.textContent = "有人 🚶";
+    pirBadge.className = "status-text pir-on";
+  } else {
+    pirBadge.textContent = "无人";
+    pirBadge.className = "status-text pir-off";
+  }
+
+  // 继电器状态
+  const relayBadge = $("relay-badge");
+  if (d.relay === 1) {
+    relayBadge.textContent = "打开 ⚡";
+    relayBadge.className = "status-text relay-on";
+  } else {
+    relayBadge.textContent = "关闭";
+    relayBadge.className = "status-text relay-off";
+  }
+
+  // 更新时间
+  const now = new Date();
+  updateTime.textContent = "最后更新: " + now.toLocaleTimeString("zh-CN");
+}
+
+// ============ 连接状态 ============
+function setOnline() {
+  if (!online) {
+    online = true;
+    statusDot.className = "dot online";
+    statusText.textContent = "在线";
+  }
+}
+
+function setOffline(msg) {
+  if (online) {
+    online = false;
+    statusDot.className = "dot";
+    statusText.textContent = msg;
+  }
+}
+
+// ============ 继电器远程控制 ============
+async function sendRelayCommand(action) {
+  const btnMap = { 'on': 'btn-on', 'off': 'btn-off', 'auto': 'btn-auto' };
+  const btnIds = Object.values(btnMap);
+
+  // 点击后临时禁用按钮，防止连点
+  btnIds.forEach(id => $(id).disabled = true);
+
+  try {
+    const resp = await fetch(API_BASE + "/api/relay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: action })
+    });
+    const json = await resp.json();
+
+    if (json.ok) {
+      statusText.textContent = "已发送: " + action.toUpperCase();
+      setTimeout(() => statusText.textContent = "在线", 1500);
+      updateModeText(action);
+    } else {
+      statusText.textContent = "发送失败: " + (json.msg || "未知错误");
+    }
+  } catch (e) {
+    statusText.textContent = "控制失败，检查网络";
+  } finally {
+    setTimeout(() => btnIds.forEach(id => $(id).disabled = false), 1500);
+  }
+}
+
+function updateModeText(action) {
+  const modeEl = $("relay-mode");
+  if (action === 'auto') {
+    modeEl.textContent = "模式: 自动（人体感应控制）";
+  } else {
+    modeEl.textContent = "模式: 手动（" + (action === 'on' ? '强制开' : '强制关') + "）";
+  }
+}
+
+// ============ 启动 ============
+initChart();
+loadHistory();
+fetchData();
+setInterval(fetchData, POLL_INTERVAL);
+</script>
+</body>
+</html>
