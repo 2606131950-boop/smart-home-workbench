@@ -12,7 +12,8 @@ graph TB
         DHT22["🌡️ DHT22<br/>温湿度传感器"]
         BH1750["☀️ BH1750<br/>光照传感器"]
         PIR["🚶 HC-SR501<br/>人体红外"]
-        RELAY["⚡ 继电器<br/>控制灯泡"]
+        RELAY["⚡ 继电器<br/>控制外设"]
+        LED["💡 LED 灯<br/>智能照明"]
         OLED["📺 SSD1306<br/>OLED 显示"]
     end
 
@@ -37,6 +38,7 @@ graph TB
     BH1750 -->|I2C| MCU
     PIR -->|GPIO4| MCU
     MCU -->|GPIO23| RELAY
+    MCU -->|GPIO2| LED
     MCU -->|I2C| OLED
 
     MCU -->|"MQTT publish<br/>sensor/data"| BROKER
@@ -44,13 +46,14 @@ graph TB
     FLASK --> DB
     FLASK -->|"REST API<br/>/api/*"| WEB
     WEB -->|"POST /api/relay"| FLASK
+    WEB -->|"POST /api/led"| FLASK
     FLASK -->|"MQTT publish<br/>sensor/command"| BROKER
     BROKER -->|"MQTT subscribe"| MCU
 ```
 
 **数据流**：
 - **上行（采集→展示）**：传感器 → ESP32 读取 → JSON 打包 → MQTT 发布到 `sensor/data` → EMQX Cloud → Python 订阅 → 写入 SQLite → Flask API → Web 面板 ECharts 折线图
-- **下行（控制→执行）**：Web 面板按钮 → POST `/api/relay` → Flask 发 MQTT 到 `sensor/command` → EMQX Cloud → ESP32 订阅 → 继电器开关
+- **下行（控制→执行）**：Web 面板按钮 → POST `/api/relay` 或 `/api/led` → Flask 发 MQTT 到 `sensor/command` → EMQX Cloud → ESP32 订阅 → 继电器/LED 独立开关
 
 ## 技术栈
 
@@ -58,7 +61,7 @@ graph TB
 |------|------|------|
 | 硬件 | ESP32-D0WD-V3 | WiFi + 蓝牙双核 MCU，Arduino IDE 开发 |
 | 传感器 | DHT22 / BH1750 / HC-SR501 | 温湿度 / 光照 / 人体红外 |
-| 执行器 | 5V 继电器模块 | 控制灯泡等外设 |
+| 执行器 | 5V 继电器 + LED 模块 | 继电器控制外设，LED 独立智能照明 |
 | 显示 | SSD1306 OLED 0.96" | I2C，128×64，实时显示传感器状态 |
 | 通信协议 | MQTT over TLS | EMQX Cloud Serverless，端口 8883 |
 | 后端 | Python 3.13 + Flask | MQTT 订阅 + REST API + SQLite 存储 |
@@ -74,6 +77,7 @@ graph TB
 | BH1750 光照 | SDA=21, SCL=22 | 3.3V | 与 OLED 共用 I2C |
 | HC-SR501 人体红外 | GPIO 4 | 5V | 上电需 10s 预热 |
 | 继电器模块 | GPIO 23 | 5V | 高电平触发 |
+| LED 灯模块 | GPIO 2 | 3.3V | 3 脚（VCC/GND/S），S 接 GPIO2 |
 | OLED SSD1306 | SDA=21, SCL=22 | 3.3V | I2C 地址 0x3C |
 
 > BH1750 和 OLED 共用 I2C 总线（SDA=21, SCL=22）
@@ -128,7 +132,7 @@ python flask_api.py
 [MQTT] 已连接 EMQX Cloud，订阅 sensor/data ...
   面板:    http://localhost:5000/panel
   首页:    http://localhost:5000
-  API:     /api/latest  |  /api/history  |  /api/relay  |  /api/stats
+  API:     /api/latest  |  /api/history  |  /api/relay  |  /api/led  |  /api/stats
 =======================================================
 ```
 
@@ -187,15 +191,24 @@ PORT = 5000
 | GET | `/api/history?limit=50` | 最近 N 条历史记录（最多 200） | `{"ok":true,"count":50,"data":[...]}` |
 | GET | `/api/stats` | 统计（均值/极值/PIR次数） | `{"ok":true,"data":{"total":4400,"temperature":{"avg":29.5,...}}}` |
 | POST | `/api/relay` | 继电器控制 | `{"action":"on"}` / `"off"` / `"auto"` |
+| POST | `/api/led` | LED 灯控制 | `{"action":"on"}` / `"off"` / `"auto"` |
 | GET | `/panel` | Web 控制面板页面 | HTML |
 
 ## 继电器控制模式
 
 | 模式 | 命令 | 行为 |
 |------|------|------|
-| 手动开 | `{"action":"on"}` | 强制开，忽略 PIR |
-| 手动关 | `{"action":"off"}` | 强制关，忽略 PIR |
-| 自动 | `{"action":"auto"}` | 人体感应自动控制（有人→开，无人→关） |
+| 手动开 | `{"relay":"on"}` | 强制开，忽略 PIR |
+| 手动关 | `{"relay":"off"}` | 强制关，忽略 PIR |
+| 自动 | `{"relay":"auto"}` | 人体感应：有人→开，无人→关 |
+
+## LED 灯控制模式
+
+| 模式 | 命令 | 行为 |
+|------|------|------|
+| 手动开 | `{"led":"on"}` | 强制亮，忽略环境 |
+| 手动关 | `{"led":"off"}` | 强制灭，忽略环境 |
+| 自动 | `{"led":"auto"}` | 智能照明：有人 **且** 光照 < 50lx → 亮，否则灭 |
 
 ## 数据格式
 
@@ -207,7 +220,8 @@ ESP32 发布到 `sensor/data` 的 JSON 消息：
   "humi": 55.3,
   "lux": 120,
   "pir": 0,
-  "relay": 0
+  "relay": 0,
+  "led": 0
 }
 ```
 
@@ -245,4 +259,4 @@ ESP32 发布到 `sensor/data` 的 JSON 消息：
 
 ---
 
-*最后更新：2026-08-08*
+*最后更新：2026-08-08（LED 独立控制改造）*

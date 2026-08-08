@@ -1229,6 +1229,53 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 const LOGS = [
   {
     date: "2026-08-08",
+    title: "📅 Day 12 · LED 灯独立控制改造 ✅",
+    sections: [
+      {
+        label: "👣 完成事项",
+        items: [
+          "ESP32 固件改造：LED 和继电器从绑定控制改为完全独立 ✅",
+          "新增 remoteLed 变量和 jsonHas() JSON 解析函数 ✅",
+          "MQTT 回调分离：{\"led\":\"on/off/auto\"} 和 {\"relay\":\"on/off/auto\"} 各管各的 ✅",
+          "自动模式分离：继电器跟人走，LED 跟「人+光照<50lx」走 ✅",
+          "Flask 后端：数据库加 led 列，新增 /api/led 接口 ✅",
+          "Web 面板：LED 状态从 d.led 独立读取，新增 LED 控制按钮组 ✅",
+          "排查并修复旧 Flask 进程占用 5000 端口导致新代码不生效的问题 ✅"
+        ]
+      },
+      {
+        label: "🔧 技术要点",
+        items: [
+          "LED 用 GPIO 2（GPIO 22 被 I2C 占用）",
+          "3 脚 LED 模块：VCC/GND/S，S 引脚接 GPIO 高低电平控制三极管通断",
+          "智能照明逻辑：天暗(光照<50lx) + 有人 → 自动亮灯，白天有人也不亮（省电）",
+          "继电器和 LED 独立后，继电器可接风扇等电器，互不干扰",
+          "旧 Flask 进程没杀掉会一直跑旧代码，需要 taskkill 或 Ctrl+C 停掉再重启"
+        ]
+      },
+      {
+        label: "📝 新知识点",
+        items: [
+          "嵌入式系统改代码后必须重新上传到板子才生效（不像 Web 刷新就行）",
+          "Flask 后端改代码后需要 Ctrl+C 停掉再 python flask_api.py 重启",
+          "venv 虚拟环境需要先 venv\\Scripts\\activate 激活才能用",
+          "GPIO 引脚分配要注意：I2C 专用引脚（GPIO 21/22）不能给其他设备用",
+          "JSON 手动解析用 strstr() 查找键值，比 ArduinoJson 库更轻量"
+        ]
+      },
+      {
+        label: "🔜 下一步",
+        items: [
+          "代码整理 + 注释完善",
+          "录演示视频",
+          "可选：加更多执行器（风扇、蜂鸣器等）",
+          "可选：加定时任务（如晚上自动切换 LED 到自动模式）"
+        ]
+      }
+    ]
+  },
+  {
+    date: "2026-08-08",
     title: "📅 Day 11 · 全链路端到端联调 ✅",
     sections: [
       {

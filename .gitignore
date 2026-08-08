@@ -10,3 +10,7 @@ venv/
 
 # 但保留项目源码
 !python-code/*.py
+
+# Database
+*.db
+*.db-journal

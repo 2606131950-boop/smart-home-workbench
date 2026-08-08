@@ -7,6 +7,7 @@
  *   2. 通过 TLS 加密连接 EMQX Cloud MQTT Broker
  *   3. 每 5 秒读取所有传感器，以 JSON 格式发布到 Topic: sensor/data
  *   4. OLED 实时显示 + 串口同步输出
+ *   5. 接收 Web 面板指令独立控制继电器和 LED 灯（各3模式：手动开/手动关/自动）
  *
  * 硬件连接：
  *   见 final_pinout.md 或 MEMORY.md
@@ -37,7 +38,8 @@ const char* MQTT_BROKER   = "b71f890f.ala.cn-shenzhen.emqxsl.cn";
 const int   MQTT_PORT     = 8883;               // TLS 加密端口
 const char* MQTT_USER     = "esp32";            // ← 你在 EMQX 后台创建的用户名
 const char* MQTT_PASS     = "123456";           // ← 你设的密码
-const char* MQTT_TOPIC    = "sensor/data";       // 发布数据的话题
+const char* MQTT_TOPIC_DATA = "sensor/data";       // 发布数据的话题
+const char* MQTT_TOPIC_CMD  = "sensor/command";    // 接收控制指令的话题
 
 // ============ EMQX CA 证书（根证书，验证服务器身份用）============
 const char* CA_CERT = R"EOF(
@@ -70,6 +72,7 @@ MrY=
 #define DHTTYPE   DHT22
 #define PIR_PIN   4
 #define RELAY_PIN 23
+#define LED_PIN   2    // LED 模块 S 脚接 GPIO2（VCC→3.3V, GND→GND）
 
 // ============ OLED ============
 #define SCREEN_WIDTH  128
@@ -90,8 +93,59 @@ BH1750            lightMeter;
 Adafruit_SSD1306  display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 unsigned long lastPublish = 0;
-const long    PUBLISH_INTERVAL = 5000;  // 5 秒发一次
+const long    PUBLISH_INTERVAL = 2000;  // 2 秒发一次（优化延迟）
 int           lastPir = -1;              // 记住上次 PIR 状态，变化时立即发送
+int           remoteRelay = -1;          // -1=自动, 0=远程关, 1=远程开
+int           remoteLed   = -1;          // -1=自动, 0=远程关, 1=远程开
+
+#define LED_LUX_THRESHOLD 50  // 光照低于50lx算"暗"，LED自动模式用到
+
+// ============ JSON 解析辅助：检查 msg 里是否有 "key":"value" ============
+bool jsonHas(const char* msg, const char* key, const char* val) {
+  char p1[32], p2[32];
+  snprintf(p1, sizeof(p1), "\"%s\":\"%s\"", key, val);    // 无空格 {"key":"val"}
+  snprintf(p2, sizeof(p2), "\"%s\": \"%s\"", key, val);   // 有空格 {"key": "val"}
+  return strstr(msg, p1) != NULL || strstr(msg, p2) != NULL;
+}
+
+// ============ MQTT 回调：收到 Web 发送的控制指令 ============
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  char msg[100];
+  unsigned int len = length < 99 ? length : 99;
+  memcpy(msg, payload, len);
+  msg[len] = '\0';
+
+  Serial.print("[MQTT] 收到指令: ");
+  Serial.println(msg);
+
+  // ---- 继电器命令 ----
+  if (jsonHas(msg, "relay", "on")) {
+    remoteRelay = 1;
+    digitalWrite(RELAY_PIN, HIGH);
+    Serial.println("  → 继电器: 手动开");
+  } else if (jsonHas(msg, "relay", "off")) {
+    remoteRelay = 0;
+    digitalWrite(RELAY_PIN, LOW);
+    Serial.println("  → 继电器: 手动关");
+  } else if (jsonHas(msg, "relay", "auto")) {
+    remoteRelay = -1;
+    Serial.println("  → 继电器: 切回自动模式");
+  }
+
+  // ---- LED 命令 ----
+  if (jsonHas(msg, "led", "on")) {
+    remoteLed = 1;
+    digitalWrite(LED_PIN, HIGH);
+    Serial.println("  → LED: 手动开");
+  } else if (jsonHas(msg, "led", "off")) {
+    remoteLed = 0;
+    digitalWrite(LED_PIN, LOW);
+    Serial.println("  → LED: 手动关");
+  } else if (jsonHas(msg, "led", "auto")) {
+    remoteLed = -1;
+    Serial.println("  → LED: 切回自动模式");
+  }
+}
 
 // ============ 时间同步（TLS 必需）============
 void syncTime() {
@@ -126,6 +180,10 @@ void connectMQTT() {
 
     if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
       Serial.println(" 成功!");
+      // 订阅控制指令 topic
+      mqtt.subscribe(MQTT_TOPIC_CMD);
+      Serial.print("  已订阅: ");
+      Serial.println(MQTT_TOPIC_CMD);
     } else {
       Serial.print(" 失败, 状态码=");
       Serial.print(mqtt.state());
@@ -136,14 +194,14 @@ void connectMQTT() {
 }
 
 // ============ 发布传感器数据（JSON 格式）============
-void publishSensorData(float temp, float humi, float lux, int pir, int relay) {
+void publishSensorData(float temp, float humi, float lux, int pir, int relay, int led) {
   // 构造 JSON 消息（手动拼接，不需要 ArduinoJson 库）
   char msg[200];
   snprintf(msg, sizeof(msg),
-    "{\"temp\":%.1f,\"humi\":%.1f,\"lux\":%.0f,\"pir\":%d,\"relay\":%d}",
-    temp, humi, lux, pir, relay);
+    "{\"temp\":%.1f,\"humi\":%.1f,\"lux\":%.0f,\"pir\":%d,\"relay\":%d,\"led\":%d}",
+    temp, humi, lux, pir, relay, led);
 
-  if (mqtt.publish(MQTT_TOPIC, msg)) {
+  if (mqtt.publish(MQTT_TOPIC_DATA, msg)) {
     Serial.print("MQTT 已发送: ");
     Serial.println(msg);
   } else {
@@ -152,7 +210,7 @@ void publishSensorData(float temp, float humi, float lux, int pir, int relay) {
 }
 
 // ============ OLED 显示 ============
-void showOLED(float temp, float humi, float lux, int pir, int relay,
+void showOLED(float temp, float humi, float lux, int pir, int relay, int led,
               bool wifiOk, bool mqttOk) {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
@@ -196,10 +254,17 @@ void showOLED(float temp, float humi, float lux, int pir, int relay,
     display.print("Empty");
   }
 
-  // 第 5 行: 继电器
+  // 第 5 行: 继电器 + LED（各自独立状态）
   display.setCursor(0, 56);
-  display.print("Relay: ");
+  display.print("R:");
   display.print(relay == HIGH ? "ON " : "OFF");
+  display.setCursor(45, 56);
+  display.print("L:");
+  display.print(led == HIGH ? "ON " : "OFF");
+  if (pir == HIGH) {
+    display.setCursor(90, 56);
+    display.print("PIR!");
+  }
 
   display.display();
 }
@@ -213,6 +278,8 @@ void setup() {
   pinMode(PIR_PIN, INPUT_PULLDOWN);
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
   // 传感器
   dht.begin();
@@ -261,6 +328,7 @@ void setup() {
   // MQTT TLS 配置
   espClient.setCACert(CA_CERT);  // 加载 CA 证书
   mqtt.setServer(MQTT_BROKER, MQTT_PORT);
+  mqtt.setCallback(mqttCallback);  // 注册指令回调
   connectMQTT();
 
   // HC-SR501 预热
@@ -306,13 +374,25 @@ void loop() {
   float lux   = lightMeter.readLightLevel();
   int   pir   = digitalRead(PIR_PIN);
 
-  // 自动控制：有人 → 开继电器
-  if (pir == HIGH) {
-    digitalWrite(RELAY_PIN, HIGH);
-  } else {
-    digitalWrite(RELAY_PIN, LOW);
+  // 自动控制（各自独立）
+  // 继电器自动：有人 → 开，无人 → 关
+  if (remoteRelay == -1) {
+    if (pir == HIGH) {
+      digitalWrite(RELAY_PIN, HIGH);
+    } else {
+      digitalWrite(RELAY_PIN, LOW);
+    }
+  }
+  // LED 自动：有人 + 天暗 → 亮，否则 → 灭
+  if (remoteLed == -1) {
+    if (pir == HIGH && lux < LED_LUX_THRESHOLD) {
+      digitalWrite(LED_PIN, HIGH);
+    } else {
+      digitalWrite(LED_PIN, LOW);
+    }
   }
   int relay = digitalRead(RELAY_PIN);
+  int led   = digitalRead(LED_PIN);
 
   // ---- 定时发布 MQTT ----
   unsigned long now = millis();
@@ -334,11 +414,11 @@ void loop() {
       connectMQTT();
     }
 
-    publishSensorData(temp, humi, lux, pir, relay);
+    publishSensorData(temp, humi, lux, pir, relay, led);
   }
 
   // ---- OLED 显示 ----
-  showOLED(temp, humi, lux, pir, relay,
+  showOLED(temp, humi, lux, pir, relay, led,
            WiFi.status() == WL_CONNECTED,
            mqtt.connected());
 

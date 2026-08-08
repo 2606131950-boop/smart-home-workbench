@@ -102,6 +102,8 @@
 
   .relay-on { background: #00d4aa; color: #000; }
   .relay-off { background: rgba(255,255,255,0.08); color: #666; }
+  .led-on { background: #ffa502; color: #000; }
+  .led-off { background: rgba(255,255,255,0.08); color: #666; }
 
   /* ---- 控制按钮 ---- */
   .btn-row { display: flex; gap: 12px; margin: 12px 0; }
@@ -212,17 +214,29 @@
           <div class="label" style="margin-bottom:4px;">继电器</div>
           <span class="status-text relay-off" id="relay-badge">关闭</span>
         </div>
+        <div>
+          <div class="label" style="margin-bottom:4px;">LED灯</div>
+          <span class="status-text led-off" id="led-badge">灭</span>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- 继电器控制按钮 -->
   <div class="btn-row">
-    <button class="btn btn-on" id="btn-on" onclick="sendRelayCommand('on')">继电器开</button>
-    <button class="btn btn-off" id="btn-off" onclick="sendRelayCommand('off')">继电器关</button>
-    <button class="btn" id="btn-auto" style="background:linear-gradient(135deg,#0984e3,#74b9ff);color:#fff;" onclick="sendRelayCommand('auto')">自动</button>
+    <button class="btn btn-on" id="btn-relay-on" onclick="sendRelayCommand('on')">继电器 开</button>
+    <button class="btn btn-off" id="btn-relay-off" onclick="sendRelayCommand('off')">继电器 关</button>
+    <button class="btn" id="btn-relay-auto" style="background:linear-gradient(135deg,#0984e3,#74b9ff);color:#fff;" onclick="sendRelayCommand('auto')">自动</button>
   </div>
-  <div class="update-time" id="relay-mode">模式: 自动（人体感应控制）</div>
+  <div class="update-time" id="relay-mode">继电器: 自动（人体感应）</div>
+
+  <!-- LED 控制按钮 -->
+  <div class="btn-row" style="margin-top:8px;">
+    <button class="btn btn-on" id="btn-led-on" onclick="sendLedCommand('on')" style="background:linear-gradient(135deg,#e17055,#ffa502);color:#000;">LED 开</button>
+    <button class="btn btn-off" id="btn-led-off" onclick="sendLedCommand('off')">LED 关</button>
+    <button class="btn" id="btn-led-auto" style="background:linear-gradient(135deg,#0984e3,#74b9ff);color:#fff;" onclick="sendLedCommand('auto')">自动</button>
+  </div>
+  <div class="update-time" id="led-mode">LED: 自动（有人+天暗时亮）</div>
 
   <!-- ECharts 温湿度折线图 -->
   <div class="chart-area">
@@ -467,6 +481,16 @@ function updateDisplay(d) {
     relayBadge.className = "status-text relay-off";
   }
 
+  // LED 状态（独立控制，读取 d.led）
+  const ledBadge = $("led-badge");
+  if (d.led === 1) {
+    ledBadge.textContent = "亮 💡";
+    ledBadge.className = "status-text led-on";
+  } else {
+    ledBadge.textContent = "灭";
+    ledBadge.className = "status-text led-off";
+  }
+
   // 更新时间
   const now = new Date();
   updateTime.textContent = "最后更新: " + now.toLocaleTimeString("zh-CN");
@@ -491,10 +515,9 @@ function setOffline(msg) {
 
 // ============ 继电器远程控制 ============
 async function sendRelayCommand(action) {
-  const btnMap = { 'on': 'btn-on', 'off': 'btn-off', 'auto': 'btn-auto' };
+  const btnMap = { 'on': 'btn-relay-on', 'off': 'btn-relay-off', 'auto': 'btn-relay-auto' };
   const btnIds = Object.values(btnMap);
 
-  // 点击后临时禁用按钮，防止连点
   btnIds.forEach(id => $(id).disabled = true);
 
   try {
@@ -506,9 +529,9 @@ async function sendRelayCommand(action) {
     const json = await resp.json();
 
     if (json.ok) {
-      statusText.textContent = "已发送: " + action.toUpperCase();
+      statusText.textContent = "继电器: " + action.toUpperCase();
       setTimeout(() => statusText.textContent = "在线", 1500);
-      updateModeText(action);
+      updateRelayModeText(action);
     } else {
       statusText.textContent = "发送失败: " + (json.msg || "未知错误");
     }
@@ -519,12 +542,50 @@ async function sendRelayCommand(action) {
   }
 }
 
-function updateModeText(action) {
-  const modeEl = $("relay-mode");
+// ============ LED 远程控制 ============
+async function sendLedCommand(action) {
+  const btnMap = { 'on': 'btn-led-on', 'off': 'btn-led-off', 'auto': 'btn-led-auto' };
+  const btnIds = Object.values(btnMap);
+
+  btnIds.forEach(id => $(id).disabled = true);
+
+  try {
+    const resp = await fetch(API_BASE + "/api/led", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: action })
+    });
+    const json = await resp.json();
+
+    if (json.ok) {
+      statusText.textContent = "LED: " + action.toUpperCase();
+      setTimeout(() => statusText.textContent = "在线", 1500);
+      updateLedModeText(action);
+    } else {
+      statusText.textContent = "发送失败: " + (json.msg || "未知错误");
+    }
+  } catch (e) {
+    statusText.textContent = "控制失败，检查网络";
+  } finally {
+    setTimeout(() => btnIds.forEach(id => $(id).disabled = false), 1500);
+  }
+}
+
+function updateRelayModeText(action) {
+  const el = $("relay-mode");
   if (action === 'auto') {
-    modeEl.textContent = "模式: 自动（人体感应控制）";
+    el.textContent = "继电器: 自动（人体感应）";
   } else {
-    modeEl.textContent = "模式: 手动（" + (action === 'on' ? '强制开' : '强制关') + "）";
+    el.textContent = "继电器: 手动（" + (action === 'on' ? '强制开' : '强制关') + "）";
+  }
+}
+
+function updateLedModeText(action) {
+  const el = $("led-mode");
+  if (action === 'auto') {
+    el.textContent = "LED: 自动（有人+天暗时亮）";
+  } else {
+    el.textContent = "LED: 手动（" + (action === 'on' ? '强制开' : '强制关') + "）";
   }
 }
 
